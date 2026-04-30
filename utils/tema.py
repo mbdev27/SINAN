@@ -34,7 +34,7 @@ def aplicar_tema_streamlit(st):
         }}
 
         html, body, [data-testid="stAppViewContainer"], * {{
-            color: #aed2f5 !important;
+            color: #a2f279 !important;
         }}
 
         [data-testid="stAppViewContainer"] {{
