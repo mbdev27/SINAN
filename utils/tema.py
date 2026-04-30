@@ -112,7 +112,7 @@ def aplicar_tema_plotly():
 
     template.layout.paper_bgcolor = "white"
     template.layout.plot_bgcolor = "white"
-    template.layout.font = dict(color="#000000", size=14)
+    template.layout.font = dict(color="#0057B7", size=14)
     template.layout.title = dict(
         font=dict(
             color=CORES["azul"],
@@ -127,14 +127,14 @@ def aplicar_tema_plotly():
 
     template.layout.xaxis = dict(
         tickfont=dict(color="#0057B7"),
-        title=dict(font=dict(color="#000000")),
+        title=dict(font=dict(color="#0057B7")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
 
     template.layout.yaxis = dict(
         tickfont=dict(color="#0057B7"),
-        title=dict(font=dict(color="#000000")),
+        title=dict(font=dict(color="#0057B7")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
