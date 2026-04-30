@@ -56,7 +56,7 @@ def aplicar_tema_streamlit(st):
         }}
 
         [data-testid="stSidebar"] * {{
-            color: #FFFFFF !important;
+            color: #0057B7 !important;
         }}
 
         .stMetric {{
