@@ -6,7 +6,7 @@ CORES = {
     "verde": "#1A944E",
     "amarelo": "#FFC20E",
     "laranja": "#FF8C00",
-    "fundo": "#F6F9FC",
+    "fundo": "#FFFFFF",
     "branco": "#FFFFFF",
     "preto": "#000000",
 }
