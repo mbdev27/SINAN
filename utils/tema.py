@@ -8,7 +8,7 @@ CORES = {
     "laranja": "#FF8C00",
     "fundo": "#F6F9FC",
     "branco": "#FFFFFF",
-    "preto": "#0057B7",
+    "preto": "#000000",
 }
 
 PALETA = [
@@ -34,7 +34,7 @@ def aplicar_tema_streamlit(st):
         }}
 
         html, body, [data-testid="stAppViewContainer"], * {{
-            color: #0057B7 !important;
+            color: #aed2f5 !important;
         }}
 
         [data-testid="stAppViewContainer"] {{
@@ -48,7 +48,7 @@ def aplicar_tema_streamlit(st):
 
         p, li {{
             text-align: justify !important;
-            color: #0057B7 !important;
+            color: #000000 !important;
         }}
 
         [data-testid="stSidebar"] {{
@@ -69,7 +69,7 @@ def aplicar_tema_streamlit(st):
 
         button, .stButton button {{
             background-color: #FFFFFF !important;
-            color: #0057B7 !important;
+            color: #000000 !important;
             border-radius: 8px !important;
             border: 1px solid var(--azul) !important;
         }}
@@ -112,7 +112,7 @@ def aplicar_tema_plotly():
 
     template.layout.paper_bgcolor = "white"
     template.layout.plot_bgcolor = "white"
-    template.layout.font = dict(color="#0057B7", size=14)
+    template.layout.font = dict(color="#000000", size=14)
     template.layout.title = dict(
         font=dict(
             color=CORES["azul"],
@@ -122,19 +122,19 @@ def aplicar_tema_plotly():
     )
 
     template.layout.legend = dict(
-        font=dict(color="#0057B7")
+        font=dict(color="#000000")
     )
 
     template.layout.xaxis = dict(
-        tickfont=dict(color="#0057B7"),
-        title=dict(font=dict(color="#0057B7")),
+        tickfont=dict(color="#000000"),
+        title=dict(font=dict(color="#000000")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
 
     template.layout.yaxis = dict(
-        tickfont=dict(color="#0057B7"),
-        title=dict(font=dict(color="#0057B7")),
+        tickfont=dict(color="#000000"),
+        title=dict(font=dict(color="#000000")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
