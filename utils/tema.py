@@ -48,7 +48,7 @@ def aplicar_tema_streamlit(st):
 
         p, li {{
             text-align: justify !important;
-            color: #000000 !important;
+            color: #0057B7 !important;
         }}
 
         [data-testid="stSidebar"] {{
@@ -112,7 +112,7 @@ def aplicar_tema_plotly():
 
     template.layout.paper_bgcolor = "white"
     template.layout.plot_bgcolor = "white"
-    template.layout.font = dict(color="#000000", size=14)
+    template.layout.font = dict(color="#0057B7", size=14)
     template.layout.title = dict(
         font=dict(
             color=CORES["azul"],
@@ -122,19 +122,19 @@ def aplicar_tema_plotly():
     )
 
     template.layout.legend = dict(
-        font=dict(color="#000000")
+        font=dict(color="#0057B7")
     )
 
     template.layout.xaxis = dict(
-        tickfont=dict(color="#000000"),
-        title=dict(font=dict(color="#000000")),
+        tickfont=dict(color="#0057B7"),
+        title=dict(font=dict(color="#0057B7")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
 
     template.layout.yaxis = dict(
-        tickfont=dict(color="#000000"),
-        title=dict(font=dict(color="#000000")),
+        tickfont=dict(color="#0057B7"),
+        title=dict(font=dict(color="#0057B7")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
     )
