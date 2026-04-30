@@ -1,9 +1,11 @@
+from config.catalogo_agravos import CATALOGO_AGRAVOS
+
 AGRAVOS = {
-    "Acidente de Trabalho Grave": {
-        "slug": "acidente_trabalho_grave",
-        "pagina": "2_Painel_Acidente_Trabalho",
-        "mapping": "mappings.acidente_trabalho_grave",
-        "pdf": "assets/DRT_Acidente_Trabalho_Grave.pdf",
-        "descricao": "Ficha de investigação de Acidente de Trabalho Grave do SINAN."
+    item["agravo"]: {
+        "ficha": item["ficha_pdf"],
+        "cids": item.get("cids", []),
+        "campos": item.get("campos", []),
+        "palavras": item.get("palavras", []),
     }
+    for item in CATALOGO_AGRAVOS
 }
