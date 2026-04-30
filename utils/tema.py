@@ -8,7 +8,7 @@ CORES = {
     "laranja": "#FF8C00",
     "fundo": "#F6F9FC",
     "branco": "#FFFFFF",
-    "preto": "02376b",
+    "preto": "#000000",
 }
 
 PALETA = [
