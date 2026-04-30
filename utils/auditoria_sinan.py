@@ -19,9 +19,39 @@ def inferir_agravo(df, nome_arquivo=""):
 
     valores_agravo = ""
     if "ID_AGRAVO" in df.columns:
-        valores_agravo = " ".join(df["ID_AGRAVO"].dropna().astype(str).unique()[:20]).upper()
+        valores_agravo = " ".join(
+            df["ID_AGRAVO"]
+            .dropna()
+            .astype(str)
+            .unique()[:20]
+        ).upper()
 
-    if "Z20" in valores_agravo or "BIO" in nome or {"MATERIAL", "AGENTE", "CIRC_ACID"}.intersection(colunas):
+    sinais_biologico = {
+        "MATERIAL",
+        "AGENTE",
+        "CIRC_ACID",
+        "CIRCUNSTAN",
+        "SIT_VACIN",
+        "FONTE",
+        "EPI_LUVA",
+        "EPI_AVENTAL"
+    }
+
+    sinais_grave = {
+        "TIPO_ACID",
+        "EVOLUCAO",
+        "CAT",
+        "LOCAL_ACID",
+        "PART_CORP1",
+        "CID_LESAO"
+    }
+
+    if (
+        "Z20" in valores_agravo
+        or "BIO" in nome
+        or "ACBIO" in nome
+        or len(sinais_biologico.intersection(colunas)) >= 2
+    ):
         return {
             "agravo": "Acidente de Trabalho com Exposição a Material Biológico",
             "confianca": "Alta",
@@ -29,7 +59,10 @@ def inferir_agravo(df, nome_arquivo=""):
             "ficha_sugerida": "ACIDENTE DE TRABALHO COM EXPOSIÇÃO À MATERIAL BIOLÓGICO.pdf"
         }
 
-    if "Y96" in valores_agravo or {"TIPO_ACID", "EVOLUCAO", "CAT", "LOCAL_ACID"}.intersection(colunas):
+    if (
+        "Y96" in valores_agravo
+        or len(sinais_grave.intersection(colunas)) >= 2
+    ):
         return {
             "agravo": "Acidente de Trabalho Grave",
             "confianca": "Alta",
@@ -46,10 +79,19 @@ def inferir_agravo(df, nome_arquivo=""):
 
 
 def detectar_colunas_vazias(df):
+    if df.empty:
+        return pd.DataFrame()
+
     dados = []
 
     for col in df.columns:
-        vazios = df[col].isna().sum() + (df[col].astype(str).str.strip() == "").sum()
+        serie = df[col].astype(str).str.strip()
+        vazios = (
+            df[col].isna().sum()
+            + (serie == "").sum()
+            + serie.str.upper().isin(["NAN", "NONE", "NAT", "NULL", "IGNORADO"]).sum()
+        )
+
         percentual = round((vazios / len(df)) * 100, 1) if len(df) else 0
 
         if percentual >= 90:
@@ -70,12 +112,15 @@ def detectar_colunas_vazias(df):
 
 
 def calcular_completude_banco(df, campos=None):
+    if df.empty:
+        return 0
+
     if campos is None:
         campos = list(df.columns)
 
     campos_existentes = [c for c in campos if c in df.columns]
 
-    if not campos_existentes or df.empty:
+    if not campos_existentes:
         return 0
 
     total_celulas = len(df) * len(campos_existentes)
@@ -99,7 +144,12 @@ def detectar_duplicidades(df):
     if "NU_NOTIFIC" not in df.columns:
         return pd.DataFrame()
 
-    duplicados = df[df["NU_NOTIFIC"].astype(str).duplicated(keep=False)]
+    duplicados = df[
+        df["NU_NOTIFIC"]
+        .astype(str)
+        .duplicated(keep=False)
+    ]
+
     return duplicados.sort_values("NU_NOTIFIC")
 
 
@@ -107,30 +157,15 @@ def detectar_sexo_incompativel(df):
     if "CS_SEXO" not in df.columns:
         return pd.DataFrame()
 
-    validos = ["M", "F", "I", "9"]
-    return df[~df["CS_SEXO"].astype(str).str.upper().str.strip().isin(validos)]
+    validos = ["M", "F", "I", "9", "IGNORADO"]
 
-
-def extrair_idade_sinan(valor):
-    texto = str(valor).strip()
-
-    if texto.endswith(".0"):
-        texto = texto[:-2]
-
-    numeros = re.sub(r"\D", "", texto)
-
-    if not numeros:
-        return pd.NA
-
-    if len(numeros) > 3:
-        idade = int(numeros[-3:])
-    else:
-        idade = int(numeros)
-
-    if 0 <= idade <= 120:
-        return idade
-
-    return pd.NA
+    return df[
+        ~df["CS_SEXO"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+        .isin(validos)
+    ]
 
 
 def detectar_idade_incompativel(df):
@@ -138,24 +173,31 @@ def detectar_idade_incompativel(df):
         return pd.DataFrame()
 
     temp = df.copy()
+
     temp["DT_NASC"] = pd.to_datetime(temp["DT_NASC"], errors="coerce")
     temp["DT_ACID"] = pd.to_datetime(temp["DT_ACID"], errors="coerce")
 
-    temp["IDADE_CALC_AUDITORIA"] = temp.apply(
-        lambda r: (
-            r["DT_ACID"].year - r["DT_NASC"].year
-            - ((r["DT_ACID"].month, r["DT_ACID"].day) < (r["DT_NASC"].month, r["DT_NASC"].day))
-        )
-        if pd.notna(r["DT_NASC"]) and pd.notna(r["DT_ACID"])
-        else pd.NA,
-        axis=1
-    )
+    def calcular(row):
+        if pd.isna(row["DT_NASC"]) or pd.isna(row["DT_ACID"]):
+            return pd.NA
+
+        idade = row["DT_ACID"].year - row["DT_NASC"].year
+
+        if (row["DT_ACID"].month, row["DT_ACID"].day) < (
+            row["DT_NASC"].month,
+            row["DT_NASC"].day
+        ):
+            idade -= 1
+
+        return idade
+
+    temp["IDADE_CALC_AUDITORIA"] = temp.apply(calcular, axis=1)
 
     problemas = temp[
-        (temp["IDADE_CALC_AUDITORIA"].notna()) &
-        (
-            (temp["IDADE_CALC_AUDITORIA"] < 0) |
-            (temp["IDADE_CALC_AUDITORIA"] > 120)
+        (temp["IDADE_CALC_AUDITORIA"].notna())
+        & (
+            (temp["IDADE_CALC_AUDITORIA"] < 0)
+            | (temp["IDADE_CALC_AUDITORIA"] > 120)
         )
     ]
 
@@ -163,20 +205,23 @@ def detectar_idade_incompativel(df):
 
 
 def detectar_cid_incompativel(df, agravo):
-    problemas = []
-
     if "ID_AGRAVO" not in df.columns:
         return pd.DataFrame()
 
-    for idx, row in df.iterrows():
+    problemas = []
+
+    for _, row in df.iterrows():
         cid = normalizar_texto(row.get("ID_AGRAVO", ""))
 
+        if cid in ["", "IGNORADO", "NAN", "NONE", "NAT", "NULL"]:
+            continue
+
         if agravo == "Acidente de Trabalho Grave":
-            if "Y96" not in cid and cid not in ["", "IGNORADO"]:
+            if "Y96" not in cid:
                 problemas.append(row)
 
-        if agravo == "Acidente de Trabalho com Exposição a Material Biológico":
-            if "Z20" not in cid and cid not in ["", "IGNORADO"]:
+        elif agravo == "Acidente de Trabalho com Exposição a Material Biológico":
+            if "Z20" not in cid:
                 problemas.append(row)
 
     if not problemas:
@@ -189,9 +234,15 @@ def detectar_municipio_divergente(df):
     if "ID_MUNICIP" not in df.columns or "ID_MN_RESI" not in df.columns:
         return pd.DataFrame()
 
-    return df[
-        df["ID_MUNICIP"].astype(str).str.strip()
-        != df["ID_MN_RESI"].astype(str).str.strip()
+    temp = df.copy()
+
+    temp["ID_MUNICIP_AUD"] = temp["ID_MUNICIP"].astype(str).str.strip()
+    temp["ID_MN_RESI_AUD"] = temp["ID_MN_RESI"].astype(str).str.strip()
+
+    return temp[
+        (temp["ID_MUNICIP_AUD"] != "")
+        & (temp["ID_MN_RESI_AUD"] != "")
+        & (temp["ID_MUNICIP_AUD"] != temp["ID_MN_RESI_AUD"])
     ]
 
 
@@ -203,6 +254,7 @@ def incompletude_por_unidade(df, campos_criticos):
 
     for unidade, grupo in df.groupby("ID_UNIDADE"):
         score = calcular_completude_banco(grupo, campos_criticos)
+
         dados.append({
             "Unidade": unidade,
             "Registros": len(grupo),
@@ -213,8 +265,28 @@ def incompletude_por_unidade(df, campos_criticos):
     return pd.DataFrame(dados).sort_values("% preenchimento")
 
 
-def gerar_auditoria_sinan(df, agravo="Acidente de Trabalho Grave"):
-    campos_criticos = [
+def campos_criticos_por_agravo(agravo):
+    if agravo == "Acidente de Trabalho com Exposição a Material Biológico":
+        return [
+            "NU_NOTIFIC",
+            "DT_NOTIFIC",
+            "ID_MUNICIP",
+            "ID_UNIDADE",
+            "DT_ACID",
+            "NM_PACIENT",
+            "DT_NASC",
+            "CS_SEXO",
+            "CS_RACA",
+            "CS_ESCOL_N",
+            "ID_OCUPA_N",
+            "SIT_TRAB",
+            "MATERIAL",
+            "AGENTE",
+            "CIRC_ACID",
+            "EVOLUCAO"
+        ]
+
+    return [
         "NU_NOTIFIC",
         "DT_NOTIFIC",
         "ID_MUNICIP",
@@ -232,6 +304,10 @@ def gerar_auditoria_sinan(df, agravo="Acidente de Trabalho Grave"):
         "EVOLUCAO"
     ]
 
+
+def gerar_auditoria_sinan(df, agravo="Acidente de Trabalho Grave"):
+    campos_criticos = campos_criticos_por_agravo(agravo)
+
     score = calcular_completude_banco(df, campos_criticos)
 
     return {
@@ -244,4 +320,5 @@ def gerar_auditoria_sinan(df, agravo="Acidente de Trabalho Grave"):
         "cid_incompativel": detectar_cid_incompativel(df, agravo),
         "municipio_divergente": detectar_municipio_divergente(df),
         "incompletude_unidade": incompletude_por_unidade(df, campos_criticos),
+        "campos_criticos": campos_criticos,
     }
