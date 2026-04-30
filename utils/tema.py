@@ -8,7 +8,7 @@ CORES = {
     "laranja": "#FF8C00",
     "fundo": "#F6F9FC",
     "branco": "#FFFFFF",
-    "preto": "#000000",
+    "preto": "#0057B7",
 }
 
 PALETA = [
@@ -34,7 +34,7 @@ def aplicar_tema_streamlit(st):
         }}
 
         html, body, [data-testid="stAppViewContainer"], * {{
-            color: #000000 !important;
+            color: #0057B7 !important;
         }}
 
         [data-testid="stAppViewContainer"] {{
