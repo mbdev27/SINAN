@@ -34,7 +34,7 @@ def aplicar_tema_streamlit(st):
         }}
 
         html, body, [data-testid="stAppViewContainer"], * {{
-            color: #000000 !important;
+            color: #0057B7 !important;
         }}
 
         [data-testid="stAppViewContainer"] {{
@@ -48,7 +48,7 @@ def aplicar_tema_streamlit(st):
 
         p, li {{
             text-align: justify !important;
-            color: #000000 !important;
+            color: #0057B7 !important;
         }}
 
         [data-testid="stSidebar"] {{
@@ -69,7 +69,7 @@ def aplicar_tema_streamlit(st):
 
         button, .stButton button {{
             background-color: #FFFFFF !important;
-            color: #000000 !important;
+            color: #0057B7 !important;
             border-radius: 8px !important;
             border: 1px solid var(--azul) !important;
         }}
@@ -122,11 +122,11 @@ def aplicar_tema_plotly():
     )
 
     template.layout.legend = dict(
-        font=dict(color="#000000")
+        font=dict(color="#0057B7")
     )
 
     template.layout.xaxis = dict(
-        tickfont=dict(color="#000000"),
+        tickfont=dict(color="#0057B7"),
         title=dict(font=dict(color="#000000")),
         gridcolor="#E5E5E5",
         zerolinecolor="#E5E5E5",
