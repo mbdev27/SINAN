@@ -19,10 +19,16 @@ PALETA = [
 ]
 
 
+# ============================================================
+# TEMA STREAMLIT
+# ============================================================
+
 def aplicar_tema_streamlit(st):
+
     st.markdown(
         f"""
         <style>
+
         :root {{
             --azul: {CORES["azul"]};
             --verde: {CORES["verde"]};
@@ -33,31 +39,55 @@ def aplicar_tema_streamlit(st):
             --preto: {CORES["preto"]};
         }}
 
-        html, body, [data-testid="stAppViewContainer"], * {{
-            color: "#0057B7 !important;
-        }}
+        /* ===================================================
+        FUNDO GERAL
+        =================================================== */
 
         [data-testid="stAppViewContainer"] {{
-            background: linear-gradient(to bottom right, #F6F9FC, #EAF3FF) !important;
+            background: linear-gradient(
+                to bottom right,
+                #F6F9FC,
+                #EAF3FF
+            ) !important;
         }}
+
+        /* ===================================================
+        TEXTOS
+        =================================================== */
+
+        html, body, [data-testid="stAppViewContainer"], * {{
+            color: #0057B7 !important;
+        }}
+
+        p, li, label, span {{
+            color: #000000 !important;
+            text-align: justify !important;
+        }}
+
+        /* ===================================================
+        TÍTULOS
+        =================================================== */
 
         h1, h2, h3, h4, h5, h6 {{
             color: var(--amarelo) !important;
             font-weight: 800 !important;
         }}
 
-        p, li {{
-            text-align: justify !important;
-            color: #000000 !important;
-        }}
+        /* ===================================================
+        SIDEBAR
+        =================================================== */
 
         [data-testid="stSidebar"] {{
             background: var(--azul) !important;
         }}
 
         [data-testid="stSidebar"] * {{
-            color: "#FFC20 !important;
+            color: #FFFFFF !important;
         }}
+
+        /* ===================================================
+        CARDS / MÉTRICAS
+        =================================================== */
 
         .stMetric {{
             background-color: var(--amarelo) !important;
@@ -67,12 +97,21 @@ def aplicar_tema_streamlit(st):
             box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
         }}
 
+        /* ===================================================
+        BOTÕES
+        =================================================== */
+
         button, .stButton button {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
             border-radius: 8px !important;
             border: 1px solid var(--azul) !important;
+            font-weight: 600 !important;
         }}
+
+        /* ===================================================
+        CARDS PERSONALIZADOS
+        =================================================== */
 
         .mb-card {{
             background: white;
@@ -83,8 +122,16 @@ def aplicar_tema_streamlit(st):
             margin-bottom: 18px;
         }}
 
+        /* ===================================================
+        CABEÇALHO
+        =================================================== */
+
         .mb-header {{
-            background: linear-gradient(135deg, var(--azul), var(--verde));
+            background: linear-gradient(
+                135deg,
+                var(--azul),
+                var(--verde)
+            );
             padding: 34px;
             border-radius: 14px;
             margin-bottom: 25px;
@@ -101,18 +148,47 @@ def aplicar_tema_streamlit(st):
             font-size: 1.1rem;
             text-align: left !important;
         }}
+
+        /* ===================================================
+        DATAFRAME
+        =================================================== */
+
+        .stDataFrame {{
+            background: white !important;
+            border-radius: 12px !important;
+        }}
+
+        /* ===================================================
+        EXPANDERS
+        =================================================== */
+
+        .streamlit-expanderHeader {{
+            background: white !important;
+            border-radius: 8px !important;
+        }}
+
         </style>
         """,
         unsafe_allow_html=True
     )
 
 
+# ============================================================
+# TEMA PLOTLY
+# ============================================================
+
 def aplicar_tema_plotly():
+
     template = pio.templates["plotly_white"]
 
     template.layout.paper_bgcolor = "white"
     template.layout.plot_bgcolor = "white"
-    template.layout.font = dict(color="#000000", size=14)
+
+    template.layout.font = dict(
+        color="#000000",
+        size=14
+    )
+
     template.layout.title = dict(
         font=dict(
             color=CORES["azul"],
