@@ -108,22 +108,36 @@ def aplicar_tema_streamlit(st):
 
 
 def aplicar_tema_plotly():
-    pio.templates["mb_tema"] = pio.templates["plotly_white"]
-    pio.templates["mb_tema"].layout.update(
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#000000", size=14),
-        title=dict(font=dict(color=CORES["azul"], size=20, family="Arial")),
-        legend=dict(font=dict(color="#000000")),
-        xaxis=dict(
-            tickfont=dict(color="#000000"),
-            titlefont=dict(color="#000000"),
-            gridcolor="#E5E5E5",
-        ),
-        yaxis=dict(
-            tickfont=dict(color="#000000"),
-            titlefont=dict(color="#000000"),
-            gridcolor="#E5E5E5",
-        ),
+    template = pio.templates["plotly_white"]
+
+    template.layout.paper_bgcolor = "white"
+    template.layout.plot_bgcolor = "white"
+    template.layout.font = dict(color="#000000", size=14)
+    template.layout.title = dict(
+        font=dict(
+            color=CORES["azul"],
+            size=20,
+            family="Arial"
+        )
     )
+
+    template.layout.legend = dict(
+        font=dict(color="#000000")
+    )
+
+    template.layout.xaxis = dict(
+        tickfont=dict(color="#000000"),
+        title=dict(font=dict(color="#000000")),
+        gridcolor="#E5E5E5",
+        zerolinecolor="#E5E5E5",
+    )
+
+    template.layout.yaxis = dict(
+        tickfont=dict(color="#000000"),
+        title=dict(font=dict(color="#000000")),
+        gridcolor="#E5E5E5",
+        zerolinecolor="#E5E5E5",
+    )
+
+    pio.templates["mb_tema"] = template
     pio.templates.default = "mb_tema"
