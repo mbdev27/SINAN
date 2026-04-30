@@ -1,8 +1,8 @@
-streamlit>=1.28.0
-pandas>=2.0.0
-plotly>=5.17.0
-numpy>=1.24.0
-dbfread>=2.0.7
-simpledbf>=0.2.6
-reportlab>=4.0.0
-pypdf>=4.0.0
+streamlit
+pandas
+numpy
+plotly
+dbfread
+reportlab
+pypdf
+openpyxl
