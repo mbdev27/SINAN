@@ -6,9 +6,9 @@ CORES = {
     "verde": "#1A944E",
     "amarelo": "#FFC20E",
     "laranja": "#FF8C00",
-    "fundo": "#FFFFFF",
+    "fundo": "#F6F9FC",
     "branco": "#FFFFFF",
-    "preto": "#000000",
+    "preto": "02376b",
 }
 
 PALETA = [
