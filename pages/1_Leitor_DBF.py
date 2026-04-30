@@ -64,9 +64,8 @@ agravo_manual = st.selectbox(
 )
 
 st.info(
-   agravo_manual = st.selectbox(
-    "Selecione o agravo, caso queira informar manualmente",
-    ["Detectar automaticamente"] + list(AGRAVOS.keys())
+    f"Agravo selecionado manualmente: **{agravo_manual}**. "
+    "O sistema também tentará reconhecer automaticamente o agravo após o upload."
 )
 
 
