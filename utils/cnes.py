@@ -39,53 +39,17 @@ def localizar_arquivo_cnes(caminho=None):
     return None
 
 
-def detectar_coluna_por_nome(colunas, candidatos):
-    for col in colunas:
-        col_norm = normalizar_texto(col)
-
-        for cand in candidatos:
-            cand_norm = normalizar_texto(cand)
-
-            if col_norm == cand_norm or cand_norm in col_norm:
-                return col
-
-    return None
-
-
-def tentar_ler_aba_com_cabecalho(arquivo, aba):
-    bruto = pd.read_excel(
-        arquivo,
-        sheet_name=aba,
-        header=None,
-        dtype=str
-    )
-
+def encontrar_linha_cabecalho(bruto):
     for idx, row in bruto.iterrows():
         valores = [normalizar_texto(v) for v in row.tolist()]
 
-        tem_cnes = any(
-            v == "CNES"
-            or "CODIGO CNES" in v
-            or "COD CNES" in v
-            for v in valores
-        )
-
-        tem_nome = any(
-            "NOME FANTASIA" in v
-            or "NOME DA UNIDADE" in v
-            or "UNIDADE" == v
-            or "ESTABELECIMENTO" in v
-            or "NOME" == v
-            for v in valores
-        )
+        tem_cnes = any(v == "CNES" for v in valores)
+        tem_nome = any("NOME FANTASIA" in v for v in valores)
 
         if tem_cnes and tem_nome:
-            tabela = bruto.iloc[idx + 1:].copy()
-            tabela.columns = bruto.iloc[idx].tolist()
-            tabela.columns = [str(c).strip() for c in tabela.columns]
-            return tabela
+            return idx
 
-    return pd.DataFrame()
+    return None
 
 
 def carregar_cnes(caminho=None):
@@ -102,49 +66,36 @@ def carregar_cnes(caminho=None):
     bases = []
 
     for aba in xls.sheet_names:
-        tabela = tentar_ler_aba_com_cabecalho(arquivo, aba)
+        try:
+            bruto = pd.read_excel(
+                arquivo,
+                sheet_name=aba,
+                header=None,
+                dtype=str
+            )
+        except Exception:
+            continue
 
-        if tabela.empty:
-            try:
-                tabela = pd.read_excel(
-                    arquivo,
-                    sheet_name=aba,
-                    dtype=str
-                )
-            except Exception:
-                continue
+        linha_cabecalho = encontrar_linha_cabecalho(bruto)
 
+        if linha_cabecalho is None:
+            continue
+
+        tabela = bruto.iloc[linha_cabecalho + 1:].copy()
+        tabela.columns = bruto.iloc[linha_cabecalho].tolist()
         tabela.columns = [str(c).strip() for c in tabela.columns]
 
-        col_cnes = detectar_coluna_por_nome(
-            tabela.columns,
-            [
-                "CNES",
-                "CÓDIGO CNES",
-                "CODIGO CNES",
-                "COD CNES",
-                "COD_CNES",
-                "ID_UNIDADE",
-                "CO_UNI_NOT",
-                "CODIGO DA UNIDADE",
-                "CÓDIGO DA UNIDADE",
-            ]
-        )
+        col_cnes = None
+        col_nome = None
 
-        col_nome = detectar_coluna_por_nome(
-            tabela.columns,
-            [
-                "NOME FANTASIA",
-                "NOME DA UNIDADE",
-                "NOME UNIDADE",
-                "UNIDADE",
-                "ESTABELECIMENTO",
-                "NO_FANTASIA",
-                "RAZÃO SOCIAL",
-                "RAZAO SOCIAL",
-                "NOME",
-            ]
-        )
+        for col in tabela.columns:
+            col_norm = normalizar_texto(col)
+
+            if col_norm == "CNES":
+                col_cnes = col
+
+            if "NOME FANTASIA" in col_norm:
+                col_nome = col
 
         if not col_cnes or not col_nome:
             continue
@@ -173,6 +124,7 @@ def carregar_cnes(caminho=None):
         return pd.DataFrame(columns=["CNES", "NOME_UNIDADE"])
 
     cnes = pd.concat(bases, ignore_index=True)
+
     cnes["CNES"] = cnes["CNES"].apply(limpar_codigo)
 
     cnes = cnes.drop_duplicates(subset=["CNES"], keep="first")
@@ -181,16 +133,6 @@ def carregar_cnes(caminho=None):
 
 
 def localizar_nome_por_cnes(codigo_cnes, base_cnes):
-    """
-    Localiza nome da unidade aceitando:
-    - código igual;
-    - código do DBF como prefixo do CNES da planilha;
-    - CNES da planilha como prefixo do código do DBF.
-
-    Isso resolve casos em que o DBF aparece com 6 dígitos
-    e a base CNES com 7 dígitos.
-    """
-
     codigo = limpar_codigo(codigo_cnes)
 
     if not codigo or base_cnes.empty:
@@ -205,7 +147,7 @@ def localizar_nome_por_cnes(codigo_cnes, base_cnes):
     if not localizado.empty:
         return localizado.iloc[0]["NOME_UNIDADE"]
 
-    # 2. Código do DBF é prefixo do CNES da planilha
+    # 2. DBF com 6 dígitos, planilha com 7: 242731 -> 2427311
     localizado = base[
         base["CNES_LIMPO"].astype(str).str.startswith(codigo)
     ]
@@ -213,7 +155,7 @@ def localizar_nome_por_cnes(codigo_cnes, base_cnes):
     if not localizado.empty:
         return localizado.iloc[0]["NOME_UNIDADE"]
 
-    # 3. CNES da planilha é prefixo do código do DBF
+    # 3. Caso inverso
     localizado = base[
         base["CNES_LIMPO"].astype(str).apply(
             lambda x: codigo.startswith(x) if x else False
