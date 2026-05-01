@@ -25,14 +25,8 @@ def limpar_codigo(valor):
     if pd.isna(valor):
         return ""
 
-    texto = str(valor).strip()
-
-    if texto.endswith(".0"):
-        texto = texto[:-2]
-
-    texto = "".join(c for c in texto if c.isdigit())
-
-    return texto
+    texto = str(valor).strip().replace(".0", "")
+    return "".join(c for c in texto if c.isdigit())
 
 
 def localizar_arquivo_cnes(caminho=None):
@@ -69,7 +63,12 @@ def tentar_ler_aba_com_cabecalho(arquivo, aba):
     for idx, row in bruto.iterrows():
         valores = [normalizar_texto(v) for v in row.tolist()]
 
-        tem_cnes = any("CNES" == v or "CODIGO CNES" in v or "COD CNES" in v for v in valores)
+        tem_cnes = any(
+            v == "CNES"
+            or "CODIGO CNES" in v
+            or "COD CNES" in v
+            for v in valores
+        )
 
         tem_nome = any(
             "NOME FANTASIA" in v
@@ -174,12 +173,57 @@ def carregar_cnes(caminho=None):
         return pd.DataFrame(columns=["CNES", "NOME_UNIDADE"])
 
     cnes = pd.concat(bases, ignore_index=True)
-
     cnes["CNES"] = cnes["CNES"].apply(limpar_codigo)
 
     cnes = cnes.drop_duplicates(subset=["CNES"], keep="first")
 
     return cnes.reset_index(drop=True)
+
+
+def localizar_nome_por_cnes(codigo_cnes, base_cnes):
+    """
+    Localiza nome da unidade aceitando:
+    - código igual;
+    - código do DBF como prefixo do CNES da planilha;
+    - CNES da planilha como prefixo do código do DBF.
+
+    Isso resolve casos em que o DBF aparece com 6 dígitos
+    e a base CNES com 7 dígitos.
+    """
+
+    codigo = limpar_codigo(codigo_cnes)
+
+    if not codigo or base_cnes.empty:
+        return "Unidade não encontrada na base CNES"
+
+    base = base_cnes.copy()
+    base["CNES_LIMPO"] = base["CNES"].apply(limpar_codigo)
+
+    # 1. Igualdade exata
+    localizado = base[base["CNES_LIMPO"] == codigo]
+
+    if not localizado.empty:
+        return localizado.iloc[0]["NOME_UNIDADE"]
+
+    # 2. Código do DBF é prefixo do CNES da planilha
+    localizado = base[
+        base["CNES_LIMPO"].astype(str).str.startswith(codigo)
+    ]
+
+    if not localizado.empty:
+        return localizado.iloc[0]["NOME_UNIDADE"]
+
+    # 3. CNES da planilha é prefixo do código do DBF
+    localizado = base[
+        base["CNES_LIMPO"].astype(str).apply(
+            lambda x: codigo.startswith(x) if x else False
+        )
+    ]
+
+    if not localizado.empty:
+        return localizado.iloc[0]["NOME_UNIDADE"]
+
+    return "Unidade não encontrada na base CNES"
 
 
 def buscar_nome_unidade(codigo_cnes):
@@ -188,16 +232,7 @@ def buscar_nome_unidade(codigo_cnes):
     if base.empty:
         return "Base CNES não localizada ou inválida"
 
-    codigo = limpar_codigo(codigo_cnes)
-
-    localizado = base[
-        base["CNES"].astype(str).str.strip() == codigo
-    ]
-
-    if localizado.empty:
-        return "Unidade não encontrada na base CNES"
-
-    return localizado.iloc[0]["NOME_UNIDADE"]
+    return localizar_nome_por_cnes(codigo_cnes, base)
 
 
 def anexar_nome_unidade(df, coluna_unidade="ID_UNIDADE"):
@@ -213,22 +248,10 @@ def anexar_nome_unidade(df, coluna_unidade="ID_UNIDADE"):
         df["NOME_UNIDADE"] = "Base CNES não localizada ou inválida"
         return df
 
-    df["_CNES_LIMPO"] = df[coluna_unidade].apply(limpar_codigo)
+    df["CNES"] = df[coluna_unidade].apply(limpar_codigo)
 
-    df = df.merge(
-        base,
-        how="left",
-        left_on="_CNES_LIMPO",
-        right_on="CNES"
-    )
-
-    df["NOME_UNIDADE"] = df["NOME_UNIDADE"].fillna(
-        "Unidade não encontrada na base CNES"
-    )
-
-    df = df.drop(
-        columns=["_CNES_LIMPO", "CNES"],
-        errors="ignore"
+    df["NOME_UNIDADE"] = df["CNES"].apply(
+        lambda codigo: localizar_nome_por_cnes(codigo, base)
     )
 
     return df
