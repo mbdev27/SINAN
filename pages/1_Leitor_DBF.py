@@ -1,18 +1,14 @@
 import tempfile
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from utils.leitor_dbf import ler_dbf_com_diagnostico, resumo_dbf
-from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly, CORES, PALETA
+from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
 from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
 from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
 from config.agravos import AGRAVOS
+from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
 
-
-# ============================================================
-# CONFIGURAÇÃO DA PÁGINA
-# ============================================================
 
 st.set_page_config(
     page_title="Leitor DBF SINAN",
@@ -25,53 +21,68 @@ aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
 
 
-# ============================================================
-# CABEÇALHO
-# ============================================================
+st.markdown("""
+<style>
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
 
-st.markdown(
-    """
-    <div class="mb-header">
-        <h1>🗂️ Leitor Inteligente DBF SINAN</h1>
-        <p>
-            Envie um banco DBF do SINAN, reconheça automaticamente o agravo,
-            identifique o encoding, avalie a qualidade do banco e visualize
-            os dados decodificados com segurança.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+.metric-card {
+    background: #FFFFFF;
+    border-left: 5px solid #0057B7;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.10);
+}
+
+.metric-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0057B7 !important;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #000000 !important;
+    word-break: break-word;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
-# ============================================================
-# CONFIGURAÇÕES
-# ============================================================
+def mini_metric_grid(items):
+    html = '<div class="metric-grid">'
+    for label, value in items:
+        html += f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+        </div>
+        """
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+
+st.markdown("""
+<div class="mb-header">
+    <h1>🗂️ Leitor Inteligente DBF SINAN</h1>
+    <p>
+        Envie um banco DBF do SINAN, reconheça automaticamente o agravo,
+        associe a ficha correspondente, audite a qualidade do banco e acesse
+        o painel específico sem precisar enviar o arquivo novamente.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 
 LIMITE_MB = 100
 LIMITE_BYTES = LIMITE_MB * 1024 * 1024
 
-
-# ============================================================
-# SELEÇÃO DO AGRAVO
-# ============================================================
-
-st.subheader("📌 Agravo")
-
-agravo_manual = st.selectbox(
-    "Selecione o agravo, caso queira informar manualmente",
-    ["Detectar automaticamente"] + list(AGRAVOS.keys())
-)
-
-st.info(
-    "O sistema tentará reconhecer automaticamente o agravo a partir do banco DBF enviado. "
-    "Caso prefira, você pode selecionar manualmente o agravo acima."
-)
-
-
-# ============================================================
-# UPLOAD
-# ============================================================
 
 st.subheader("📤 Envio do arquivo DBF")
 
@@ -89,10 +100,6 @@ if arquivo.size > LIMITE_BYTES:
     st.stop()
 
 
-# ============================================================
-# LEITURA DO DBF
-# ============================================================
-
 with tempfile.NamedTemporaryFile(delete=False, suffix=".DBF") as tmp:
     tmp.write(arquivo.read())
     caminho_tmp = tmp.name
@@ -108,71 +115,76 @@ if df.empty:
     st.stop()
 
 
-# ============================================================
-# PREVIEW INTELIGENTE
-# ============================================================
-
 inferido = inferir_agravo(df, arquivo.name)
 
-if agravo_manual != "Detectar automaticamente":
-    agravo_para_auditoria = agravo_manual
-    ficha_sugerida = AGRAVOS[agravo_manual].get("ficha", "Ficha não informada")
-    confianca = "Manual"
-    motivo = "Agravo selecionado manualmente pelo usuário."
+opcoes_agravos = list(AGRAVOS.keys())
+
+if inferido["agravo"] in opcoes_agravos:
+    indice_inicial = opcoes_agravos.index(inferido["agravo"])
 else:
-    agravo_para_auditoria = inferido["agravo"]
-    ficha_sugerida = inferido["ficha_sugerida"]
+    indice_inicial = 0
+
+st.subheader("📌 Agravo associado ao banco")
+
+agravo_confirmado = st.selectbox(
+    "O sistema identificou o agravo abaixo. Você pode alterar manualmente, se necessário.",
+    opcoes_agravos,
+    index=indice_inicial
+)
+
+ficha_sugerida = AGRAVOS[agravo_confirmado].get("ficha", "Ficha não informada")
+
+if agravo_confirmado == inferido["agravo"]:
     confianca = inferido["confianca"]
     motivo = inferido["motivo"]
+else:
+    confianca = "Manual"
+    motivo = "Agravo alterado manualmente pelo usuário."
+
 
 st.header("🧠 Leitura Inteligente do Banco")
 
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric("Encoding identificado", diagnostico_leitura["encoding_detectado"])
-c2.metric("Registros", diagnostico_leitura["registros"])
-c3.metric("Colunas", diagnostico_leitura["colunas"])
-c4.metric("Agravo provável", agravo_para_auditoria)
+mini_metric_grid([
+    ("Registros", diagnostico_leitura["registros"]),
+    ("Colunas", diagnostico_leitura["colunas"]),
+    ("Agravo identificado", agravo_confirmado),
+    ("Confiança", confianca),
+])
 
 st.info(
-    f"**Agravo associado:** {agravo_para_auditoria}  \n\n"
-    f"**Confiança:** {confianca}  \n\n"
     f"**Ficha sugerida:** {ficha_sugerida}  \n\n"
     f"**Motivo:** {motivo}"
 )
 
 if "ranking" in inferido and inferido["ranking"]:
     with st.expander("🏁 Ver ranking de possíveis agravos"):
-        ranking_df = pd.DataFrame(inferido["ranking"])
-        st.dataframe(ranking_df, use_container_width=True)
+        st.dataframe(pd.DataFrame(inferido["ranking"]), use_container_width=True)
 
 
-# ============================================================
-# APLICA MAPEAMENTO QUANDO DISPONÍVEL
-# ============================================================
-
-if agravo_para_auditoria == "Acidente de Trabalho Grave":
+if agravo_confirmado == "Acidente de Trabalho Grave":
     df = aplicar_mapeamento(df)
     df_publico = gerar_tabela_publica(df)
 else:
     df_publico = df.copy()
 
 
-# ============================================================
-# AUDITORIA DE QUALIDADE DO BANCO
-# ============================================================
+st.session_state["df_sinan_atual"] = df
+st.session_state["df_sinan_publico"] = df_publico
+st.session_state["agravo_sinan_atual"] = agravo_confirmado
+st.session_state["ficha_sinan_atual"] = ficha_sugerida
 
-auditoria = gerar_auditoria_sinan(df, agravo=agravo_para_auditoria)
+
+auditoria = gerar_auditoria_sinan(df, agravo=agravo_confirmado)
 
 st.header("🧪 Auditoria de Qualidade do Banco")
 
-a1, a2, a3, a4, a5 = st.columns(5)
-
-a1.metric("Score do banco", f"{auditoria['score_banco']}%")
-a2.metric("Qualidade", auditoria["qualidade_banco"])
-a3.metric("Duplicidades", len(auditoria["duplicidades"]))
-a4.metric("Sexo incompatível", len(auditoria["sexo_incompativel"]))
-a5.metric("CID incompatível", len(auditoria["cid_incompativel"]))
+mini_metric_grid([
+    ("Score do banco", f"{auditoria['score_banco']}%"),
+    ("Qualidade", auditoria["qualidade_banco"]),
+    ("Duplicidades prováveis", len(auditoria["duplicidades"])),
+    ("Sexo incompatível", len(auditoria["sexo_incompativel"])),
+    ("CID incompatível", len(auditoria["cid_incompativel"])),
+])
 
 b1, b2 = st.columns(2)
 
@@ -185,13 +197,10 @@ with b1:
 
 with b2:
     st.subheader("🧱 Colunas mais vazias")
-    st.dataframe(
-        auditoria["colunas_vazias"].head(20),
-        use_container_width=True
-    )
+    st.dataframe(auditoria["colunas_vazias"].head(20), use_container_width=True)
 
 with st.expander("🔍 Ver inconsistências detalhadas"):
-    st.markdown("### Duplicidades")
+    st.markdown("### Duplicidades prováveis")
     st.dataframe(auditoria["duplicidades"], use_container_width=True)
 
     st.markdown("### Sexo incompatível")
@@ -207,26 +216,18 @@ with st.expander("🔍 Ver inconsistências detalhadas"):
     st.dataframe(auditoria["municipio_divergente"], use_container_width=True)
 
 
-# ============================================================
-# RESUMO DO BANCO
-# ============================================================
-
 st.header("📊 Resumo do Banco")
 
-col1, col2, col3 = st.columns(3)
-
-col1.metric("Registros", len(df))
-col2.metric("Colunas", len(df.columns))
-
+notificacoes_unicas = "—"
 if "NU_NOTIFIC" in df.columns:
-    col3.metric("Notificações únicas", df["NU_NOTIFIC"].nunique())
-else:
-    col3.metric("Notificações únicas", "—")
+    notificacoes_unicas = df["NU_NOTIFIC"].nunique()
 
+mini_metric_grid([
+    ("Registros", len(df)),
+    ("Colunas", len(df.columns)),
+    ("Notificações únicas", notificacoes_unicas),
+])
 
-# ============================================================
-# BUSCAS
-# ============================================================
 
 st.header("🔎 Busca no banco")
 
@@ -251,111 +252,45 @@ if termo:
     df_busca = df_busca[mask]
 
 
-# ============================================================
-# DADOS PARA EXIBIÇÃO
-# ============================================================
+df_exibicao = df_busca.copy()
 
-df_filtrado = df_busca.copy()
-
-if df_filtrado.empty:
+if df_exibicao.empty:
     st.warning("Nenhum registro encontrado.")
     st.stop()
 
 
-# ============================================================
-# VISUALIZAÇÃO INICIAL
-# ============================================================
-
-st.header("📈 Visualização inicial")
-
-colA, colB = st.columns(2)
-
-if "CS_SEXO_DESC" in df_filtrado.columns:
-    sexo = df_filtrado["CS_SEXO_DESC"].value_counts().reset_index()
-    sexo.columns = ["Sexo", "Quantidade"]
-
-    fig = px.pie(
-        sexo,
-        names="Sexo",
-        values="Quantidade",
-        title="Distribuição por sexo",
-        color_discrete_sequence=PALETA,
-        hole=0.35
-    )
-
-    colA.plotly_chart(fig, use_container_width=True)
-
-elif "CS_SEXO" in df_filtrado.columns:
-    sexo = df_filtrado["CS_SEXO"].value_counts().reset_index()
-    sexo.columns = ["Sexo", "Quantidade"]
-
-    fig = px.pie(
-        sexo,
-        names="Sexo",
-        values="Quantidade",
-        title="Distribuição por sexo",
-        color_discrete_sequence=PALETA,
-        hole=0.35
-    )
-
-    colA.plotly_chart(fig, use_container_width=True)
-
-if "EVOLUCAO_DESC" in df_filtrado.columns:
-    evolucao = df_filtrado["EVOLUCAO_DESC"].value_counts().reset_index()
-    evolucao.columns = ["Evolução", "Quantidade"]
-
-    fig = px.bar(
-        evolucao,
-        x="Evolução",
-        y="Quantidade",
-        title="Evolução do caso",
-        color_discrete_sequence=[CORES["azul"]]
-    )
-
-    colB.plotly_chart(fig, use_container_width=True)
-
-elif "EVOLUCAO" in df_filtrado.columns:
-    evolucao = df_filtrado["EVOLUCAO"].value_counts().reset_index()
-    evolucao.columns = ["Evolução", "Quantidade"]
-
-    fig = px.bar(
-        evolucao,
-        x="Evolução",
-        y="Quantidade",
-        title="Evolução do caso",
-        color_discrete_sequence=[CORES["azul"]]
-    )
-
-    colB.plotly_chart(fig, use_container_width=True)
-
-
-# ============================================================
-# TABELA
-# ============================================================
-
 st.header("📋 Dados decodificados")
 
-st.dataframe(df_filtrado, use_container_width=True)
+st.dataframe(df_exibicao, use_container_width=True)
 
-
-# ============================================================
-# ESTRUTURA E DOWNLOAD
-# ============================================================
 
 with st.expander("📚 Estrutura do DBF"):
     st.dataframe(resumo_dbf(df), use_container_width=True)
 
+
 st.download_button(
     "📥 Baixar dados decodificados em CSV",
-    data=df_filtrado.to_csv(index=False).encode("utf-8"),
+    data=df_exibicao.to_csv(index=False).encode("utf-8"),
     file_name="sinan_dados_decodificados.csv",
     mime="text/csv"
 )
 
+
 st.markdown("---")
 
-st.success(
-    "Leitura concluída. Para análises completas, acesse o módulo específico do agravo no menu lateral."
-)
+st.header("🚀 Acessar painel específico")
 
-st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 4")
+if agravo_confirmado == "Acidente de Trabalho Grave":
+    if st.button("👷 Abrir Painel de Acidente de Trabalho Grave", use_container_width=True):
+        st.session_state["abrir_painel_acidente_trabalho"] = True
+else:
+    st.info(
+        "Este agravo já foi reconhecido, mas o painel específico ainda será criado. "
+        "Por enquanto, utilize a auditoria e os dados decodificados nesta página."
+    )
+
+if st.session_state.get("abrir_painel_acidente_trabalho", False):
+    st.markdown("---")
+    render_painel_acidente_trabalho(df)
+
+st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 5")
