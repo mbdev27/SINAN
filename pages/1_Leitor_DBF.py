@@ -21,52 +21,26 @@ aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
 
 
-st.markdown("""
-<style>
-.metric-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin-bottom: 18px;
-}
-
-.metric-card {
-    background: #FFFFFF;
-    border-left: 5px solid #0057B7;
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0px 2px 8px rgba(0,0,0,0.10);
-}
-
-.metric-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #0057B7 !important;
-    margin-bottom: 4px;
-}
-
-.metric-value {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #000000 !important;
-    word-break: break-word;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
 def mini_metric_grid(items):
-    html = '<div class="metric-grid">'
-    for label, value in items:
-        html += f"""
-        <div class="metric-card">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-        </div>
-        """
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
+    """
+    Exibe métricas de forma segura e responsiva usando componentes nativos do Streamlit.
+    Evita que HTML apareça como texto na tela.
+    """
+    if not items:
+        return
 
+    qtd = len(items)
+
+    if qtd <= 3:
+        cols = st.columns(qtd)
+    elif qtd == 4:
+        cols = st.columns(4)
+    else:
+        cols = st.columns(5)
+
+    for i, (label, value) in enumerate(items):
+        with cols[i % len(cols)]:
+            st.metric(label, value)
 
 st.markdown("""
 <div class="mb-header">
