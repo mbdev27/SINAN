@@ -5,6 +5,11 @@ import plotly.express as px
 from utils.tema import CORES, PALETA
 from utils.gerador_ficha_pdf import gerar_ficha_pdf
 from mappings.acidente_trabalho_grave import gerar_tabela_publica
+from utils.qualidade_ficha import (
+    adicionar_qualidade_ficha,
+    resumo_qualidade_ficha,
+    colocar_qualidade_no_inicio,
+)
 
 
 CAMINHO_FICHA = "assets/DRT_Acidente_Trabalho_Grave.pdf"
@@ -34,6 +39,10 @@ def render_painel_acidente_trabalho(df):
         if col in df_publico.columns:
             df_publico[col] = pd.to_datetime(df_publico[col], errors="coerce")
 
+    # ============================================================
+    # BUSCA PARA GERAÇÃO DA FICHA
+    # ============================================================
+
     st.header("🔎 Localizar registro para gerar ficha")
 
     tipo_busca = st.selectbox(
@@ -41,19 +50,34 @@ def render_painel_acidente_trabalho(df):
         ["Número da notificação", "Nome do paciente", "Nome da mãe"]
     )
 
-    termo_busca = st.text_input("Digite o termo de busca", key="busca_ficha_acidente")
+    termo_busca = st.text_input(
+        "Digite o termo de busca",
+        key="busca_ficha_acidente"
+    )
 
     resultado_ficha = pd.DataFrame()
 
     if termo_busca:
         if tipo_busca == "Número da notificação" and "NU_NOTIFIC" in df.columns:
-            resultado_ficha = df[df["NU_NOTIFIC"].astype(str).str.contains(termo_busca, case=False, na=False)]
+            resultado_ficha = df[
+                df["NU_NOTIFIC"]
+                .astype(str)
+                .str.contains(termo_busca, case=False, na=False)
+            ]
 
         elif tipo_busca == "Nome do paciente" and "NM_PACIENT" in df.columns:
-            resultado_ficha = df[df["NM_PACIENT"].astype(str).str.contains(termo_busca, case=False, na=False)]
+            resultado_ficha = df[
+                df["NM_PACIENT"]
+                .astype(str)
+                .str.contains(termo_busca, case=False, na=False)
+            ]
 
         elif tipo_busca == "Nome da mãe" and "NM_MAE_PAC" in df.columns:
-            resultado_ficha = df[df["NM_MAE_PAC"].astype(str).str.contains(termo_busca, case=False, na=False)]
+            resultado_ficha = df[
+                df["NM_MAE_PAC"]
+                .astype(str)
+                .str.contains(termo_busca, case=False, na=False)
+            ]
 
     if termo_busca and resultado_ficha.empty:
         st.warning("Nenhum registro encontrado para a busca informada.")
@@ -76,7 +100,9 @@ def render_painel_acidente_trabalho(df):
             resultado_ficha["OPCAO_BUSCA"].tolist()
         )
 
-        registro_pdf = resultado_ficha[resultado_ficha["OPCAO_BUSCA"] == escolha].iloc[0]
+        registro_pdf = resultado_ficha[
+            resultado_ficha["OPCAO_BUSCA"] == escolha
+        ].iloc[0]
 
         campos_preview = [
             "NU_NOTIFIC",
@@ -93,7 +119,7 @@ def render_painel_acidente_trabalho(df):
             "LOCAL_ACID_DESC",
             "TIPO_ACID_DESC",
             "EVOLUCAO_DESC",
-            "CAT_DESC"
+            "CAT_DESC",
         ]
 
         preview = {
@@ -102,7 +128,10 @@ def render_painel_acidente_trabalho(df):
             if campo in registro_pdf.index
         }
 
-        st.dataframe(pd.DataFrame(preview.items(), columns=["Campo", "Valor"]), use_container_width=True)
+        st.dataframe(
+            pd.DataFrame(preview.items(), columns=["Campo", "Valor"]),
+            use_container_width=True
+        )
 
         try:
             pdf_bytes = gerar_ficha_pdf(registro_pdf, CAMINHO_FICHA)
@@ -115,10 +144,17 @@ def render_painel_acidente_trabalho(df):
             )
 
         except FileNotFoundError:
-            st.error("Ficha PDF base não encontrada em assets/DRT_Acidente_Trabalho_Grave.pdf")
+            st.error(
+                "Ficha PDF base não encontrada em "
+                "assets/DRT_Acidente_Trabalho_Grave.pdf"
+            )
 
         except Exception as e:
             st.error(f"Erro ao gerar PDF: {e}")
+
+    # ============================================================
+    # FILTROS
+    # ============================================================
 
     st.sidebar.header("🔎 Filtros — Acidente de Trabalho")
 
@@ -131,7 +167,10 @@ def render_painel_acidente_trabalho(df):
     )
 
     if "DT_NOTIFIC" in df_filtrado.columns:
-        df_filtrado["DT_NOTIFIC"] = pd.to_datetime(df_filtrado["DT_NOTIFIC"], errors="coerce")
+        df_filtrado["DT_NOTIFIC"] = pd.to_datetime(
+            df_filtrado["DT_NOTIFIC"],
+            errors="coerce"
+        )
 
         min_d = df_filtrado["DT_NOTIFIC"].min()
         max_d = df_filtrado["DT_NOTIFIC"].max()
@@ -169,10 +208,17 @@ def render_painel_acidente_trabalho(df):
             )
 
             opcoes = preparar_opcoes(df_filtrado[coluna])
-            selecionados = st.sidebar.multiselect(label, opcoes, key=f"filtro_{coluna}")
+
+            selecionados = st.sidebar.multiselect(
+                label,
+                opcoes,
+                key=f"filtro_{coluna}"
+            )
 
             if selecionados:
-                df_filtrado = df_filtrado[df_filtrado[coluna].isin(selecionados)]
+                df_filtrado = df_filtrado[
+                    df_filtrado[coluna].isin(selecionados)
+                ]
 
     filtro("Sexo", "CS_SEXO_DESC")
     filtro("Raça/Cor", "CS_RACA_DESC")
@@ -186,17 +232,25 @@ def render_painel_acidente_trabalho(df):
     filtro("Ocupação", "OCUPACAO_DESC")
     filtro("Faixa Etária", "FAIXA_ETARIA_CALCULADA")
 
-    busca_geral = st.text_input("🔍 Pesquisar qualquer termo no banco filtrado", key="busca_geral_acidente")
+    busca_geral = st.text_input(
+        "🔍 Pesquisar qualquer termo no banco filtrado",
+        key="busca_geral_acidente"
+    )
 
     if busca_geral:
         mask = df_filtrado.astype(str).apply(
             lambda col: col.str.contains(busca_geral, case=False, na=False)
         ).any(axis=1)
+
         df_filtrado = df_filtrado[mask]
 
     if df_filtrado.empty:
         st.warning("Nenhum registro encontrado com os filtros aplicados.")
         return
+
+    # ============================================================
+    # INDICADORES
+    # ============================================================
 
     st.header("📊 Indicadores Principais")
 
@@ -204,21 +258,42 @@ def render_painel_acidente_trabalho(df):
 
     obitos = 0
     if "EVOLUCAO_DESC" in df_filtrado.columns:
-        obitos = df_filtrado["EVOLUCAO_DESC"].astype(str).str.contains("Óbito|Obito", case=False, na=False).sum()
+        obitos = df_filtrado["EVOLUCAO_DESC"].astype(str).str.contains(
+            "Óbito|Obito",
+            case=False,
+            na=False
+        ).sum()
 
     cat_emitida = 0
     if "CAT_DESC" in df_filtrado.columns:
-        cat_emitida = (df_filtrado["CAT_DESC"].astype(str).str.upper().str.strip() == "SIM").sum()
+        cat_emitida = (
+            df_filtrado["CAT_DESC"]
+            .astype(str)
+            .str.upper()
+            .str.strip() == "SIM"
+        ).sum()
 
     ocupacao_top = "—"
-    if "OCUPACAO_DESC" in df_filtrado.columns and not df_filtrado["OCUPACAO_DESC"].dropna().empty:
-        ocupacao_top = df_filtrado["OCUPACAO_DESC"].astype(str).value_counts().idxmax()
+    if (
+        "OCUPACAO_DESC" in df_filtrado.columns
+        and not df_filtrado["OCUPACAO_DESC"].dropna().empty
+    ):
+        ocupacao_top = (
+            df_filtrado["OCUPACAO_DESC"]
+            .astype(str)
+            .value_counts()
+            .idxmax()
+        )
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Registros", total)
     c2.metric("Óbitos", int(obitos))
     c3.metric("CAT emitida", int(cat_emitida))
     c4.metric("Ocupação mais frequente", ocupacao_top)
+
+    # ============================================================
+    # GRÁFICOS
+    # ============================================================
 
     st.header("📈 Visualizações")
 
@@ -236,6 +311,7 @@ def render_painel_acidente_trabalho(df):
             color_discrete_sequence=PALETA,
             hole=0.35
         )
+
         col1.plotly_chart(fig, use_container_width=True)
 
     if "EVOLUCAO_DESC" in df_filtrado.columns:
@@ -249,6 +325,7 @@ def render_painel_acidente_trabalho(df):
             title="Evolução do Caso",
             color_discrete_sequence=[CORES["azul"]]
         )
+
         col2.plotly_chart(fig, use_container_width=True)
 
     col3, col4 = st.columns(2)
@@ -264,6 +341,7 @@ def render_painel_acidente_trabalho(df):
             title="Situação no Mercado de Trabalho",
             color_discrete_sequence=[CORES["verde"]]
         )
+
         col3.plotly_chart(fig, use_container_width=True)
 
     if "LOCAL_ACID_DESC" in df_filtrado.columns:
@@ -277,6 +355,7 @@ def render_painel_acidente_trabalho(df):
             title="Local onde ocorreu o acidente",
             color_discrete_sequence=[CORES["laranja"]]
         )
+
         col4.plotly_chart(fig, use_container_width=True)
 
     col5, col6 = st.columns(2)
@@ -290,16 +369,23 @@ def render_painel_acidente_trabalho(df):
             "40 a 49 anos",
             "50 a 59 anos",
             "60 anos ou mais",
-            "Ignorado"
+            "Ignorado",
         ]
 
-        idade = df_filtrado["FAIXA_ETARIA_CALCULADA"].value_counts().reset_index()
+        idade = (
+            df_filtrado["FAIXA_ETARIA_CALCULADA"]
+            .value_counts()
+            .reset_index()
+        )
+
         idade.columns = ["Faixa etária", "Quantidade"]
+
         idade["Faixa etária"] = pd.Categorical(
             idade["Faixa etária"],
             categories=ordem_faixas,
             ordered=True
         )
+
         idade = idade.sort_values("Faixa etária")
 
         fig = px.bar(
@@ -309,10 +395,17 @@ def render_painel_acidente_trabalho(df):
             title="Distribuição por Faixa Etária",
             color_discrete_sequence=[CORES["amarelo"]]
         )
+
         col5.plotly_chart(fig, use_container_width=True)
 
     if "OCUPACAO_DESC" in df_filtrado.columns:
-        ocup = df_filtrado["OCUPACAO_DESC"].value_counts().reset_index().head(20)
+        ocup = (
+            df_filtrado["OCUPACAO_DESC"]
+            .value_counts()
+            .reset_index()
+            .head(20)
+        )
+
         ocup.columns = ["Ocupação", "Quantidade"]
 
         fig = px.bar(
@@ -323,6 +416,7 @@ def render_painel_acidente_trabalho(df):
             title="Top 20 Ocupações",
             color_discrete_sequence=[CORES["azul"]]
         )
+
         col6.plotly_chart(fig, use_container_width=True)
 
     if "DT_NOTIFIC" in df_filtrado.columns:
@@ -346,11 +440,57 @@ def render_painel_acidente_trabalho(df):
                 title="Notificações por mês",
                 color_discrete_sequence=[CORES["azul"]]
             )
+
             st.plotly_chart(fig, use_container_width=True)
+
+    # ============================================================
+    # QUALIDADE DO PREENCHIMENTO DAS FICHAS
+    # ============================================================
+
+    df_filtrado = adicionar_qualidade_ficha(
+        df_filtrado,
+        "Acidente de Trabalho Grave"
+    )
+
+    df_filtrado = colocar_qualidade_no_inicio(df_filtrado)
+
+    resumo_qualidade = resumo_qualidade_ficha(df_filtrado)
+
+    st.header("🧾 Qualidade do Preenchimento das Fichas")
+
+    q1, q2, q3, q4, q5 = st.columns(5)
+
+    q1.metric("Média de preenchimento", f"{resumo_qualidade['media']}%")
+    q2.metric("🔴 Ruins", resumo_qualidade["ruins"])
+    q3.metric("🟡 Medianas", resumo_qualidade["medianas"])
+    q4.metric("🟢 Boas", resumo_qualidade["boas"])
+    q5.metric("⚠️ Obrigatórios ausentes", resumo_qualidade["alertas"])
+
+    # ============================================================
+    # TABELA FINAL
+    # ============================================================
 
     st.header("📋 Dados Decodificados")
 
-    st.dataframe(df_filtrado, use_container_width=True)
+    st.dataframe(
+        df_filtrado,
+        use_container_width=True,
+        column_config={
+            "PERCENTUAL_PREENCHIMENTO": st.column_config.ProgressColumn(
+                "Preenchimento da ficha",
+                help="Percentual estimado de variáveis preenchidas na ficha.",
+                format="%.1f%%",
+                min_value=0,
+                max_value=100,
+            ),
+            "QUALIDADE_PREENCHIMENTO": st.column_config.TextColumn(
+                "Qualidade"
+            ),
+            "ALERTA_OBRIGATORIOS": st.column_config.TextColumn(
+                "Campos obrigatórios"
+            ),
+        }
+    )
 
     st.download_button(
         "📥 Baixar dados filtrados em CSV",
