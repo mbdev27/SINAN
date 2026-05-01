@@ -177,12 +177,12 @@ def classificar_qualidade(percentual):
     """
 
     if percentual < 70:
-        return "🚩 Ruim"
+        return "🔴 Ruim"
 
     if percentual < 90:
-        return "🟨 Mediana"
+        return "🟡 Mediana"
 
-    return "🟩 Boa"
+    return "🟢 Boa"
 
 
 def verificar_obrigatorios_linha(row, campos_obrigatorios):
