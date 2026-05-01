@@ -21,38 +21,46 @@ def normalizar_texto(txt):
     return txt
 
 
+def limpar_codigo(valor):
+    if pd.isna(valor):
+        return ""
+
+    valor = str(valor).strip()
+    valor = valor.replace(".0", "")
+
+    somente_digitos = "".join([c for c in valor if c.isdigit()])
+
+    return somente_digitos
+
+
 def detectar_coluna(df, candidatos):
-    colunas_norm = {normalizar_texto(c): c for c in df.columns}
+    for col in df.columns:
+        col_norm = normalizar_texto(col)
 
-    for candidato in candidatos:
-        candidato_norm = normalizar_texto(candidato)
+        for candidato in candidatos:
+            cand_norm = normalizar_texto(candidato)
 
-        for col_norm, col_original in colunas_norm.items():
-            if candidato_norm == col_norm or candidato_norm in col_norm:
-                return col_original
+            if cand_norm == col_norm or cand_norm in col_norm:
+                return col
 
     return None
 
 
 def carregar_cnes(caminho=None):
-    """
-    Carrega tabela CNES com código e nome das unidades.
-    """
-
     caminhos = [caminho] if caminho else CAMINHOS_CNES
 
-    arquivo_encontrado = None
+    arquivo = None
 
     for c in caminhos:
         if c and os.path.exists(c):
-            arquivo_encontrado = c
+            arquivo = c
             break
 
-    if not arquivo_encontrado:
+    if not arquivo:
         return pd.DataFrame(columns=["CNES", "NOME_UNIDADE"])
 
     try:
-        df = pd.read_excel(arquivo_encontrado, dtype=str)
+        df = pd.read_excel(arquivo, dtype=str)
     except Exception:
         return pd.DataFrame(columns=["CNES", "NOME_UNIDADE"])
 
@@ -65,8 +73,10 @@ def carregar_cnes(caminho=None):
             "CODIGO CNES",
             "CÓDIGO CNES",
             "COD_CNES",
+            "COD CNES",
             "ID_UNIDADE",
             "CODIGO DA UNIDADE",
+            "CÓDIGO DA UNIDADE",
         ]
     )
 
@@ -79,7 +89,9 @@ def carregar_cnes(caminho=None):
             "UNIDADE",
             "ESTABELECIMENTO",
             "NO_FANTASIA",
+            "NOME FANTASIA",
             "RAZAO SOCIAL",
+            "RAZÃO SOCIAL",
         ]
     )
 
@@ -89,13 +101,7 @@ def carregar_cnes(caminho=None):
     cnes = df[[col_cnes, col_nome]].copy()
     cnes.columns = ["CNES", "NOME_UNIDADE"]
 
-    cnes["CNES"] = (
-        cnes["CNES"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.replace(".0", "", regex=False)
-    )
+    cnes["CNES"] = cnes["CNES"].apply(limpar_codigo)
 
     cnes["NOME_UNIDADE"] = (
         cnes["NOME_UNIDADE"]
@@ -108,41 +114,3 @@ def carregar_cnes(caminho=None):
     cnes = cnes.drop_duplicates(subset=["CNES"])
 
     return cnes
-
-
-def anexar_nome_unidade(df, coluna_unidade="ID_UNIDADE"):
-    """
-    Anexa o nome da unidade ao DataFrame usando a tabela CNES.
-    """
-
-    if coluna_unidade not in df.columns:
-        return df
-
-    cnes = carregar_cnes()
-
-    if cnes.empty:
-        df["NOME_UNIDADE"] = "CNES não localizado"
-        return df
-
-    df = df.copy()
-
-    df[coluna_unidade] = (
-        df[coluna_unidade]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.replace(".0", "", regex=False)
-    )
-
-    df = df.merge(
-        cnes,
-        how="left",
-        left_on=coluna_unidade,
-        right_on="CNES"
-    )
-
-    df["NOME_UNIDADE"] = df["NOME_UNIDADE"].fillna("Unidade não encontrada na base CNES")
-
-    df = df.drop(columns=["CNES"], errors="ignore")
-
-    return df
