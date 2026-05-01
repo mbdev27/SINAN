@@ -1,230 +1,209 @@
-import tempfile
 import streamlit as st
 import pandas as pd
+import os
 
-from utils.leitor_dbf import ler_dbf_com_diagnostico, resumo_dbf
 from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
-from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
-from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
-from config.agravos import AGRAVOS
-from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
+from utils.dbf_loader import carregar_dbf
+from utils.detectar_agravo import detectar_agravo
+from utils.auditoria_sinan import auditar_banco
+from utils.qualidade_ficha import (
+    adicionar_qualidade_ficha,
+    colocar_qualidade_no_inicio,
+    resumo_qualidade_ficha
+)
 
+from mappings.acidente_trabalho_grave import (
+    aplicar_mapeamento,
+    gerar_tabela_publica
+)
+
+# ============================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================================
 
 st.set_page_config(
     page_title="Leitor DBF SINAN",
     page_icon="🗂️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
 
-
-def mini_metric_grid(items):
-    """
-    Exibe métricas de forma segura e responsiva usando componentes nativos do Streamlit.
-    Evita que HTML apareça como texto na tela.
-    """
-    if not items:
-        return
-
-    qtd = len(items)
-
-    if qtd <= 3:
-        cols = st.columns(qtd)
-    elif qtd == 4:
-        cols = st.columns(4)
-    else:
-        cols = st.columns(5)
-
-    for i, (label, value) in enumerate(items):
-        with cols[i % len(cols)]:
-            st.metric(label, value)
+# ============================================================
+# CABEÇALHO
+# ============================================================
 
 st.markdown("""
 <div class="mb-header">
-    <h1>🗂️ Leitor Inteligente DBF SINAN</h1>
+    <h1>🗂️ Leitor Inteligente de Bancos DBF — SINAN</h1>
     <p>
-        Envie um banco DBF do SINAN, reconheça automaticamente o agravo,
-        associe a ficha correspondente, audite a qualidade do banco e acesse
-        o painel específico sem precisar enviar o arquivo novamente.
+        Plataforma inteligente para leitura, auditoria,
+        análise epidemiológica e decodificação de bancos
+        DBF do SINAN.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
+# ============================================================
+# UPLOAD
+# ============================================================
 
-LIMITE_MB = 100
-LIMITE_BYTES = LIMITE_MB * 1024 * 1024
-
-
-st.subheader("📤 Envio do arquivo DBF")
+st.markdown("## 📤 Upload do banco DBF")
 
 arquivo = st.file_uploader(
-    "Envie o arquivo DBF do SINAN",
+    "Selecione o banco DBF",
     type=["dbf"]
 )
 
-if not arquivo:
-    st.info("Envie um arquivo `.DBF` para iniciar a leitura.")
+if arquivo is None:
+    st.info("Envie um arquivo DBF do SINAN para iniciar.")
     st.stop()
 
-if arquivo.size > LIMITE_BYTES:
-    st.error(f"O arquivo enviado possui mais de {LIMITE_MB} MB. Envie um arquivo menor.")
+# ============================================================
+# LIMITAR TAMANHO
+# ============================================================
+
+tamanho_mb = arquivo.size / (1024 * 1024)
+
+if tamanho_mb > 100:
+    st.error("❌ O arquivo excede o limite atual de 100MB.")
     st.stop()
 
+# ============================================================
+# SALVAR TEMPORÁRIO
+# ============================================================
 
-with tempfile.NamedTemporaryFile(delete=False, suffix=".DBF") as tmp:
-    tmp.write(arquivo.read())
-    caminho_tmp = tmp.name
+os.makedirs("temp", exist_ok=True)
 
-try:
-    df, diagnostico_leitura = ler_dbf_com_diagnostico(caminho_tmp)
-except Exception as e:
-    st.error(f"Erro ao ler o arquivo DBF: {e}")
-    st.stop()
+caminho_temp = os.path.join("temp", arquivo.name)
+
+with open(caminho_temp, "wb") as f:
+    f.write(arquivo.read())
+
+# ============================================================
+# CARREGAR DBF
+# ============================================================
+
+with st.spinner("📖 Lendo banco DBF..."):
+
+    try:
+        df = carregar_dbf(caminho_temp)
+
+    except Exception as e:
+        st.error(f"Erro ao carregar DBF: {e}")
+        st.stop()
 
 if df.empty:
-    st.warning("O DBF foi lido, mas não possui registros.")
+    st.warning("O banco enviado não possui registros.")
     st.stop()
 
+# ============================================================
+# DETECÇÃO DE AGRAVO
+# ============================================================
 
-inferido = inferir_agravo(df, arquivo.name)
-
-opcoes_agravos = list(AGRAVOS.keys())
-
-if inferido["agravo"] in opcoes_agravos:
-    indice_inicial = opcoes_agravos.index(inferido["agravo"])
-else:
-    indice_inicial = 0
-
-st.subheader("📌 Agravo associado ao banco")
+agravo_detectado = detectar_agravo(df)
 
 agravo_confirmado = st.selectbox(
-    "O sistema identificou o agravo abaixo. Você pode alterar manualmente, se necessário.",
-    opcoes_agravos,
-    index=indice_inicial
+    "🩺 Agravo identificado",
+    [
+        "Acidente de Trabalho Grave",
+        "Acidente de Trabalho com Exposição a Material Biológico",
+    ],
+    index=0 if agravo_detectado == "Acidente de Trabalho Grave" else 1
 )
 
-ficha_sugerida = AGRAVOS[agravo_confirmado].get("ficha", "Ficha não informada")
-
-if agravo_confirmado == inferido["agravo"]:
-    confianca = inferido["confianca"]
-    motivo = inferido["motivo"]
-else:
-    confianca = "Manual"
-    motivo = "Agravo alterado manualmente pelo usuário."
-
-
-st.header("🧠 Leitura Inteligente do Banco")
-
-mini_metric_grid([
-    ("Registros", diagnostico_leitura["registros"]),
-    ("Colunas", diagnostico_leitura["colunas"]),
-    ("Agravo identificado", agravo_confirmado),
-    ("Confiança", confianca),
-])
-
-st.info(
-    f"**Ficha sugerida:** {ficha_sugerida}  \n\n"
-    f"**Motivo:** {motivo}"
-)
-
-if "ranking" in inferido and inferido["ranking"]:
-    with st.expander("🏁 Ver ranking de possíveis agravos"):
-        st.dataframe(pd.DataFrame(inferido["ranking"]), use_container_width=True)
-
+# ============================================================
+# APLICAR MAPEAMENTO
+# ============================================================
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
     df = aplicar_mapeamento(df)
-    df_publico = gerar_tabela_publica(df)
-else:
-    df_publico = df.copy()
 
+df_busca = gerar_tabela_publica(df)
 
-st.session_state["df_sinan_atual"] = df
-st.session_state["df_sinan_publico"] = df_publico
-st.session_state["agravo_sinan_atual"] = agravo_confirmado
-st.session_state["ficha_sinan_atual"] = ficha_sugerida
+# ============================================================
+# LEITURA INTELIGENTE
+# ============================================================
 
+st.markdown("## 🧠 Leitura Inteligente do Banco")
 
-auditoria = gerar_auditoria_sinan(df, agravo=agravo_confirmado)
+c1, c2, c3 = st.columns(3)
 
-st.header("🧪 Auditoria de Qualidade do Banco")
+c1.markdown(f"""
+<div class="mb-card">
+    <h3>{len(df.columns)}</h3>
+    <p>Colunas identificadas</p>
+</div>
+""", unsafe_allow_html=True)
 
-mini_metric_grid([
-    ("Score do banco", f"{auditoria['score_banco']}%"),
-    ("Qualidade", auditoria["qualidade_banco"]),
-    ("Duplicidades prováveis", len(auditoria["duplicidades"])),
-    ("Sexo incompatível", len(auditoria["sexo_incompativel"])),
-    ("CID incompatível", len(auditoria["cid_incompativel"])),
-])
+c2.markdown(f"""
+<div class="mb-card">
+    <h3>{agravo_detectado}</h3>
+    <p>Agravo identificado</p>
+</div>
+""", unsafe_allow_html=True)
 
-b1, b2 = st.columns(2)
+c3.markdown(f"""
+<div class="mb-card">
+    <h3>{len(df)}</h3>
+    <p>Registros encontrados</p>
+</div>
+""", unsafe_allow_html=True)
 
-with b1:
-    st.subheader("🏥 Incompletude por unidade")
-    if not auditoria["incompletude_unidade"].empty:
-        st.dataframe(auditoria["incompletude_unidade"], use_container_width=True)
-    else:
-        st.info("Não foi possível calcular por unidade.")
+# ============================================================
+# AUDITORIA
+# ============================================================
 
-with b2:
-    st.subheader("🧱 Colunas mais vazias")
-    st.dataframe(auditoria["colunas_vazias"].head(20), use_container_width=True)
+auditoria = auditar_banco(df)
 
-with st.expander("🔍 Ver inconsistências detalhadas"):
-    st.markdown("### Duplicidades prováveis")
-    st.dataframe(auditoria["duplicidades"], use_container_width=True)
+st.markdown("## 🧪 Auditoria de Qualidade do Banco")
 
-    st.markdown("### Sexo incompatível")
-    st.dataframe(auditoria["sexo_incompativel"], use_container_width=True)
+a1, a2, a3, a4 = st.columns(4)
 
-    st.markdown("### Idade incompatível")
-    st.dataframe(auditoria["idade_incompativel"], use_container_width=True)
+a1.markdown(f"""
+<div class="mb-card">
+    <h3>{auditoria["qualidade_banco"]}</h3>
+    <p>Qualidade geral</p>
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("### CID incompatível")
-    st.dataframe(auditoria["cid_incompativel"], use_container_width=True)
+a2.markdown(f"""
+<div class="mb-card">
+    <h3>{auditoria["duplicidades"]}</h3>
+    <p>Duplicidades prováveis</p>
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("### Município de notificação diferente do município de residência")
-    st.dataframe(auditoria["municipio_divergente"], use_container_width=True)
+a3.markdown(f"""
+<div class="mb-card">
+    <h3>{auditoria["sexo_incompativel"]}</h3>
+    <p>Sexo incompatível</p>
+</div>
+""", unsafe_allow_html=True)
 
+a4.markdown(f"""
+<div class="mb-card">
+    <h3>{auditoria["cid_incompativel"]}</h3>
+    <p>CID incompatível</p>
+</div>
+""", unsafe_allow_html=True)
 
-st.header("📊 Resumo do Banco")
+# ============================================================
+# BOTÃO PARA PAINEL ESPECÍFICO
+# ============================================================
 
-notificacoes_unicas = "—"
-if "NU_NOTIFIC" in df.columns:
-    notificacoes_unicas = df["NU_NOTIFIC"].nunique()
+st.markdown("---")
 
-mini_metric_grid([
-    ("Registros", len(df)),
-    ("Colunas", len(df.columns)),
-    ("Notificações únicas", notificacoes_unicas),
-])
+if agravo_confirmado == "Acidente de Trabalho Grave":
 
+    if st.button("👷 Abrir Painel Analítico — Acidente de Trabalho Grave"):
+        st.session_state["df_dbf"] = df
+        st.switch_page("pages/2_Painel_Acidente_Trabalho.py")
 
-st.header("🔎 Busca no banco")
-
-df_busca = df_publico.copy()
-
-busca_notificacao = st.text_input("Buscar por número da notificação")
-
-if busca_notificacao and "NU_NOTIFIC" in df_busca.columns:
-    df_busca = df_busca[
-        df_busca["NU_NOTIFIC"]
-        .astype(str)
-        .str.contains(busca_notificacao, case=False, na=False)
-    ]
-
-termo = st.text_input("Buscar qualquer termo no banco")
-
-if termo:
-    mask = df_busca.astype(str).apply(
-        lambda col: col.str.contains(termo, case=False, na=False)
-    ).any(axis=1)
-
-    df_busca = df_busca[mask]
-
+# ============================================================
+# QUALIDADE DAS FICHAS
+# ============================================================
 
 df_exibicao = df_busca.copy()
 
@@ -232,39 +211,117 @@ if df_exibicao.empty:
     st.warning("Nenhum registro encontrado.")
     st.stop()
 
+df_exibicao = adicionar_qualidade_ficha(
+    df_exibicao,
+    agravo_confirmado
+)
 
-st.header("📋 Dados decodificados")
+df_exibicao = colocar_qualidade_no_inicio(df_exibicao)
 
-st.dataframe(df_exibicao, use_container_width=True)
+resumo = resumo_qualidade_ficha(df_exibicao)
 
+st.markdown("## 🧾 Qualidade do Preenchimento das Fichas")
 
-with st.expander("📚 Estrutura do DBF"):
-    st.dataframe(resumo_dbf(df), use_container_width=True)
+q1, q2, q3, q4, q5 = st.columns(5)
 
+q1.metric(
+    "Média",
+    f"{resumo['media']}%"
+)
+
+q2.metric(
+    "🚩 Ruins",
+    resumo["ruins"]
+)
+
+q3.metric(
+    "🟨 Medianas",
+    resumo["medianas"]
+)
+
+q4.metric(
+    "🟩 Boas",
+    resumo["boas"]
+)
+
+q5.metric(
+    "⚠️ Obrigatórios ausentes",
+    resumo["alertas"]
+)
+
+# ============================================================
+# DADOS DECODIFICADOS
+# ============================================================
+
+st.markdown("---")
+st.markdown("## 📋 Dados Decodificados")
+
+st.dataframe(
+    df_exibicao,
+    use_container_width=True,
+    height=650,
+
+    column_config={
+
+        "PERCENTUAL_PREENCHIMENTO": st.column_config.ProgressColumn(
+            "Preenchimento da ficha",
+            help="Percentual estimado de variáveis preenchidas.",
+            format="%.1f%%",
+            min_value=0,
+            max_value=100,
+        ),
+
+        "QUALIDADE_PREENCHIMENTO": st.column_config.TextColumn(
+            "Qualidade"
+        ),
+
+        "ALERTA_OBRIGATORIOS": st.column_config.TextColumn(
+            "Campos obrigatórios"
+        ),
+
+    }
+)
+
+# ============================================================
+# ESTRUTURA DO DBF
+# ============================================================
+
+st.markdown("---")
+
+with st.expander("🧱 Estrutura do DBF"):
+
+    estrutura = pd.DataFrame({
+        "Campo": df_exibicao.columns,
+        "Tipo": [str(df_exibicao[c].dtype) for c in df_exibicao.columns],
+        "Valores preenchidos": [
+            int(df_exibicao[c].notna().sum())
+            for c in df_exibicao.columns
+        ],
+        "Percentual preenchido": [
+            round(
+                (df_exibicao[c].notna().sum() / len(df_exibicao)) * 100,
+                1
+            )
+            if len(df_exibicao) > 0 else 0
+            for c in df_exibicao.columns
+        ]
+    })
+
+    st.dataframe(
+        estrutura,
+        use_container_width=True,
+        height=500
+    )
+
+# ============================================================
+# DOWNLOAD
+# ============================================================
+
+st.markdown("---")
 
 st.download_button(
     "📥 Baixar dados decodificados em CSV",
     data=df_exibicao.to_csv(index=False).encode("utf-8"),
-    file_name="sinan_dados_decodificados.csv",
+    file_name="dados_decodificados.csv",
     mime="text/csv"
 )
-
-
-st.markdown("---")
-
-st.header("🚀 Acessar painel específico")
-
-if agravo_confirmado == "Acidente de Trabalho Grave":
-    if st.button("👷 Abrir Painel de Acidente de Trabalho Grave", use_container_width=True):
-        st.session_state["abrir_painel_acidente_trabalho"] = True
-else:
-    st.info(
-        "Este agravo já foi reconhecido, mas o painel específico ainda será criado. "
-        "Por enquanto, utilize a auditoria e os dados decodificados nesta página."
-    )
-
-if st.session_state.get("abrir_painel_acidente_trabalho", False):
-    st.markdown("---")
-    render_painel_acidente_trabalho(df)
-
-st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 5")
