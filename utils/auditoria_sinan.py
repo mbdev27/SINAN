@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
 
-from utils.cnes import carregar_cnes
+from utils.cnes import (
+    carregar_cnes,
+    localizar_nome_por_cnes
+)
 
 
 # ============================================================
@@ -55,7 +58,7 @@ def calcular_score_banco(df):
 
 
 # ============================================================
-# DETECTAR COLUNAS MUITO VAZIAS
+# COLUNAS MAIS VAZIAS
 # ============================================================
 
 def detectar_colunas_vazias(df):
@@ -87,7 +90,7 @@ def detectar_colunas_vazias(df):
 
 
 # ============================================================
-# DETECTAR DUPLICIDADES
+# DUPLICIDADES
 # ============================================================
 
 def detectar_duplicidades(df):
@@ -156,15 +159,13 @@ def detectar_sexo_incompativel(df):
 
 def detectar_idade_incompativel(df):
 
-    colunas_possiveis = [
+    coluna_idade = None
+
+    for c in [
         "NU_IDADE_N",
         "IDADE",
         "IDADE_CALCULADA"
-    ]
-
-    coluna_idade = None
-
-    for c in colunas_possiveis:
+    ]:
         if c in df.columns:
             coluna_idade = c
             break
@@ -305,36 +306,23 @@ def calcular_incompletude_por_unidade(df):
 
     for unidade, grupo in df.groupby(col_unidade):
 
-        unidade_codigo = (
-            str(unidade)
-            .strip()
-            .replace(".0", "")
-        )
-
         unidade_codigo = "".join(
-            c for c in unidade_codigo
+            c for c in str(unidade).replace(".0", "")
             if c.isdigit()
         )
 
-        nome_unidade = (
-            "Unidade não encontrada na base CNES"
-        )
+        if cnes_base.empty:
 
-        if not cnes_base.empty:
+            nome_unidade = (
+                "Base CNES não localizada ou inválida"
+            )
 
-            localizado = cnes_base[
-                cnes_base["CNES"]
-                .astype(str)
-                .str.strip()
-                ==
-                unidade_codigo
-            ]
+        else:
 
-            if not localizado.empty:
-
-                nome_unidade = localizado.iloc[0][
-                    "NOME_UNIDADE"
-                ]
+            nome_unidade = localizar_nome_por_cnes(
+                unidade_codigo,
+                cnes_base
+            )
 
         preenchimento = calcular_score_banco(grupo)
 
@@ -355,11 +343,11 @@ def calcular_incompletude_por_unidade(df):
 
     resultado = pd.DataFrame(resultado)
 
-    resultado = resultado.sort_values(
-        "Preenchimento (%)"
+    return (
+        resultado
+        .sort_values("Preenchimento (%)")
+        .reset_index(drop=True)
     )
-
-    return resultado.reset_index(drop=True)
 
 
 # ============================================================
@@ -449,8 +437,10 @@ def inferir_agravo(df, nome_arquivo=""):
 
     if score >= 5:
         confianca = "Alta"
+
     elif score >= 3:
         confianca = "Média"
+
     else:
         confianca = "Baixa"
 
