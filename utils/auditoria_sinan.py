@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 
+from utils.cnes import carregar_cnes
+
 
 # =========================================================
 # CAMPOS OBRIGATÓRIOS — ACIDENTE DE TRABALHO GRAVE
@@ -43,7 +45,7 @@ def normalizar_vazio(valor):
 
     valor = str(valor).strip()
 
-    if valor in ["", "nan", "None", "NULL", "null", "NaT"]:
+    if valor in ["", "nan", "None", "NULL", "null", "NaT", "Ignorado"]:
         return np.nan
 
     return valor
@@ -59,7 +61,6 @@ def calcular_percentual_preenchimento(df):
     """
 
     resultado = []
-
     total = len(df)
 
     for col in df.columns:
@@ -92,7 +93,6 @@ def calcular_percentual_preenchimento(df):
 # =========================================================
 
 def calcular_score_banco(df):
-
     preenchimento = calcular_percentual_preenchimento(df)
 
     if preenchimento.empty:
@@ -108,11 +108,10 @@ def calcular_score_banco(df):
 # =========================================================
 
 def classificar_qualidade(score):
-
     if score >= 90:
         return "🟢 Excelente"
 
-    elif score >= 70:
+    if score >= 70:
         return "🟡 Mediana"
 
     return "🔴 Ruim"
@@ -123,7 +122,6 @@ def classificar_qualidade(score):
 # =========================================================
 
 def detectar_campos_criticos_vazios(df, agravo=None):
-
     campos = []
 
     if agravo in AGRAVOS_MAP:
@@ -150,7 +148,6 @@ def detectar_campos_criticos_vazios(df, agravo=None):
         percentual = round((vazios / len(df)) * 100, 2) if len(df) else 0
 
         if vazios > 0:
-
             inconsistencias.append({
                 "Campo": campo,
                 "Registros vazios": vazios,
@@ -165,8 +162,10 @@ def detectar_campos_criticos_vazios(df, agravo=None):
 # =========================================================
 
 def detectar_colunas_vazias(df):
-
     preenchimento = calcular_percentual_preenchimento(df)
+
+    if preenchimento.empty:
+        return pd.DataFrame()
 
     preenchimento["Vazios (%)"] = 100 - preenchimento["Percentual"]
 
@@ -188,11 +187,10 @@ def detectar_duplicidades(df):
     Detecta possível duplicidade por:
     - Nome do paciente
     - Nome da mãe
-    - Data do acidente / sintomas / ocorrência
+    - Data do acidente / sintomas / ocorrência / notificação
     """
 
     col_nome = "NM_PACIENT" if "NM_PACIENT" in df.columns else None
-
     col_mae = "NM_MAE_PAC" if "NM_MAE_PAC" in df.columns else None
 
     col_data = None
@@ -203,7 +201,6 @@ def detectar_duplicidades(df):
         "DT_OCOR",
         "DT_NOTIFIC"
     ]:
-
         if candidato in df.columns:
             col_data = candidato
             break
@@ -238,6 +235,13 @@ def detectar_duplicidades(df):
         .astype(str)
     )
 
+    # Evita considerar registros totalmente vazios como duplicados
+    temp = temp[
+        (temp["_NOME_DUP"] != "")
+        & (temp["_MAE_DUP"] != "")
+        & (temp["_DATA_DUP"] != "NaT")
+    ]
+
     duplicados = temp[
         temp.duplicated(
             subset=[
@@ -264,13 +268,12 @@ def detectar_duplicidades(df):
 # =========================================================
 
 def detectar_sexo_incompativel(df):
-
     if "CS_SEXO" not in df.columns:
         return pd.DataFrame()
 
-    col = df["CS_SEXO"].astype(str).str.upper()
+    col = df["CS_SEXO"].astype(str).str.upper().str.strip()
 
-    invalidos = ~col.isin(["M", "F", "I"])
+    invalidos = ~col.isin(["M", "F", "I", "9", "IGNORADO", "", "NAN"])
 
     return df[invalidos]
 
@@ -280,7 +283,6 @@ def detectar_sexo_incompativel(df):
 # =========================================================
 
 def detectar_idade_incompativel(df):
-
     colunas_possiveis = [
         "IDADE",
         "NU_IDADE_N",
@@ -312,18 +314,34 @@ def detectar_idade_incompativel(df):
 # =========================================================
 
 def detectar_cid_incompativel(df):
+    """
+    Verifica CIDs com formato aparentemente inválido.
 
-    if "CID10" not in df.columns:
+    Procura primeiro por CID10.
+    Se não existir, usa ID_AGRAVO.
+    """
+
+    coluna = None
+
+    for candidato in ["CID10", "ID_AGRAVO"]:
+        if candidato in df.columns:
+            coluna = candidato
+            break
+
+    if not coluna:
         return pd.DataFrame()
 
     cid = (
-        df["CID10"]
+        df[coluna]
         .astype(str)
         .str.upper()
         .str.strip()
+        .str.replace(".", "", regex=False)
     )
 
-    invalidos = ~cid.str.match(r"^[A-Z][0-9]{2}")
+    vazios = cid.isin(["", "NAN", "NONE", "NAT", "NULL", "IGNORADO"])
+
+    invalidos = ~cid.str.match(r"^[A-Z][0-9]{2}") & ~vazios
 
     return df[invalidos]
 
@@ -333,12 +351,12 @@ def detectar_cid_incompativel(df):
 # =========================================================
 
 def detectar_municipio_divergente(df):
-
     col_not = None
     col_res = None
 
     candidatos_not = [
         "ID_MN_NOTI",
+        "ID_MUNICIP",
         "MUNICIPIO_NOTIFICACAO"
     ]
 
@@ -360,25 +378,34 @@ def detectar_municipio_divergente(df):
     if not col_not or not col_res:
         return pd.DataFrame()
 
-    divergente = (
+    noti = (
         df[col_not]
+        .fillna("")
         .astype(str)
         .str.strip()
-        !=
+    )
+
+    resi = (
         df[col_res]
+        .fillna("")
         .astype(str)
         .str.strip()
+    )
+
+    divergente = (
+        (noti != "")
+        & (resi != "")
+        & (noti != resi)
     )
 
     return df[divergente]
 
 
 # =========================================================
-# INCOMPLETUDE POR UNIDADE
+# INCOMPLETUDE POR UNIDADE COM CNES
 # =========================================================
 
 def calcular_incompletude_por_unidade(df):
-
     col_unidade = None
 
     for candidato in [
@@ -386,7 +413,6 @@ def calcular_incompletude_por_unidade(df):
         "UNIDADE_NOTIFICANTE",
         "NM_UNID_NOT"
     ]:
-
         if candidato in df.columns:
             col_unidade = candidato
             break
@@ -394,14 +420,34 @@ def calcular_incompletude_por_unidade(df):
     if not col_unidade:
         return pd.DataFrame()
 
+    cnes = carregar_cnes()
+
     resultado = []
 
     for unidade, grupo in df.groupby(col_unidade):
 
+        unidade_codigo = (
+            str(unidade)
+            .strip()
+            .replace(".0", "")
+        )
+
+        nome_unidade = "Unidade não encontrada na base CNES"
+
+        if not cnes.empty and "CNES" in cnes.columns:
+            localizado = cnes[
+                cnes["CNES"].astype(str).str.strip() == unidade_codigo
+            ]
+
+            if not localizado.empty:
+                nome_unidade = localizado.iloc[0]["NOME_UNIDADE"]
+
         preenchimento = calcular_score_banco(grupo)
 
         resultado.append({
-            "Unidade": unidade,
+            "CNES": unidade_codigo,
+            "Unidade": nome_unidade,
+            "Registros": len(grupo),
             "Percentual de preenchimento": preenchimento,
             "Classificação": classificar_qualidade(preenchimento)
         })
@@ -418,7 +464,6 @@ def calcular_incompletude_por_unidade(df):
 # =========================================================
 
 def inferir_agravo(df, nome_arquivo=""):
-
     nome_arquivo = str(nome_arquivo).upper()
 
     ranking = []
@@ -428,30 +473,54 @@ def inferir_agravo(df, nome_arquivo=""):
             "DT_ACID",
             "CAT",
             "TP_ACID",
+            "TIPO_ACID",
             "LOCAL_ACID",
             "SIT_TRAB",
             "OCUPACAO",
-            "ID_OCUPA_N"
-        ]
+            "ID_OCUPA_N",
+            "EVOLUCAO"
+        ],
+        "Acidente de Trabalho com Exposição a Material Biológico": [
+            "DT_ACID",
+            "TP_EXPOS",
+            "MATERIAL",
+            "CIRC_ACID",
+            "AGENTE",
+            "FONTE",
+            "ID_OCUPA_N",
+            "SIT_TRAB"
+        ],
+    }
+
+    fichas = {
+        "Acidente de Trabalho Grave": "DRT_Acidente_Trabalho_Grave.pdf",
+        "Acidente de Trabalho com Exposição a Material Biológico": "ACIDENTE DE TRABALHO COM EXPOSIÇÃO À MATERIAL BIOLÓGICO.pdf",
     }
 
     melhor_agravo = "Desconhecido"
     maior_score = 0
+    melhor_motivo = ""
 
     for agravo, colunas_chave in regras.items():
 
         score = 0
-
         presentes = []
 
         for coluna in colunas_chave:
-
             if coluna in df.columns:
                 score += 1
                 presentes.append(coluna)
 
         if "ACIDENTE" in nome_arquivo:
             score += 2
+
+        if "BIO" in nome_arquivo or "BIOLOGICO" in nome_arquivo or "BIOLÓGICO" in nome_arquivo:
+            if agravo == "Acidente de Trabalho com Exposição a Material Biológico":
+                score += 3
+
+        if "GRAVE" in nome_arquivo:
+            if agravo == "Acidente de Trabalho Grave":
+                score += 3
 
         ranking.append({
             "Agravo": agravo,
@@ -462,6 +531,7 @@ def inferir_agravo(df, nome_arquivo=""):
         if score > maior_score:
             maior_score = score
             melhor_agravo = agravo
+            melhor_motivo = f"{score} características compatíveis identificadas."
 
     ranking = sorted(
         ranking,
@@ -469,10 +539,10 @@ def inferir_agravo(df, nome_arquivo=""):
         reverse=True
     )
 
-    if maior_score >= 6:
+    if maior_score >= 7:
         confianca = "Alta"
 
-    elif maior_score >= 3:
+    elif maior_score >= 4:
         confianca = "Média"
 
     else:
@@ -481,7 +551,9 @@ def inferir_agravo(df, nome_arquivo=""):
     return {
         "agravo": melhor_agravo,
         "confianca": confianca,
-        "motivo": f"{maior_score} características compatíveis identificadas.",
+        "score": maior_score,
+        "motivo": melhor_motivo,
+        "ficha_sugerida": fichas.get(melhor_agravo, "Selecionar manualmente"),
         "ranking": ranking
     }
 
@@ -491,30 +563,18 @@ def inferir_agravo(df, nome_arquivo=""):
 # =========================================================
 
 def gerar_auditoria_sinan(df, agravo=None):
-
     score = calcular_score_banco(df)
 
     return {
-
         "score_banco": score,
-
         "qualidade_banco": classificar_qualidade(score),
-
         "preenchimento": calcular_percentual_preenchimento(df),
-
         "campos_criticos": detectar_campos_criticos_vazios(df, agravo),
-
         "colunas_vazias": detectar_colunas_vazias(df),
-
         "duplicidades": detectar_duplicidades(df),
-
         "sexo_incompativel": detectar_sexo_incompativel(df),
-
         "idade_incompativel": detectar_idade_incompativel(df),
-
         "cid_incompativel": detectar_cid_incompativel(df),
-
         "municipio_divergente": detectar_municipio_divergente(df),
-
         "incompletude_unidade": calcular_incompletude_por_unidade(df),
     }
