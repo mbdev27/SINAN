@@ -1,10 +1,6 @@
 import pandas as pd
 
 
-# ============================================================
-# CAMPOS AVALIADOS POR AGRAVO
-# ============================================================
-
 CAMPOS_AVALIADOS_POR_AGRAVO = {
     "Acidente de Trabalho Grave": [
         "NU_NOTIFIC",
@@ -73,10 +69,6 @@ CAMPOS_AVALIADOS_POR_AGRAVO = {
 }
 
 
-# ============================================================
-# CAMPOS OBRIGATÓRIOS POR AGRAVO
-# ============================================================
-
 CAMPOS_OBRIGATORIOS_POR_AGRAVO = {
     "Acidente de Trabalho Grave": [
         "NU_NOTIFIC",
@@ -119,15 +111,7 @@ CAMPOS_OBRIGATORIOS_POR_AGRAVO = {
 }
 
 
-# ============================================================
-# FUNÇÕES AUXILIARES
-# ============================================================
-
 def campo_preenchido(valor):
-    """
-    Retorna True se o valor deve ser considerado preenchido.
-    """
-
     if pd.isna(valor):
         return False
 
@@ -151,10 +135,6 @@ def campo_preenchido(valor):
 
 
 def calcular_percentual_linha(row, campos_avaliados):
-    """
-    Calcula o percentual de preenchimento de uma ficha/registro.
-    """
-
     campos_existentes = [
         campo for campo in campos_avaliados
         if campo in row.index
@@ -172,10 +152,6 @@ def calcular_percentual_linha(row, campos_avaliados):
 
 
 def classificar_qualidade(percentual):
-    """
-    Classifica a qualidade do preenchimento da ficha.
-    """
-
     if percentual < 70:
         return "🔴 Ruim"
 
@@ -186,10 +162,6 @@ def classificar_qualidade(percentual):
 
 
 def verificar_obrigatorios_linha(row, campos_obrigatorios):
-    """
-    Verifica campos obrigatórios ausentes em uma ficha/registro.
-    """
-
     faltantes = []
 
     for campo in campos_obrigatorios:
@@ -205,18 +177,7 @@ def verificar_obrigatorios_linha(row, campos_obrigatorios):
     return "✅ Obrigatórios preenchidos"
 
 
-# ============================================================
-# FUNÇÃO PRINCIPAL
-# ============================================================
-
 def adicionar_qualidade_ficha(df, agravo):
-    """
-    Adiciona ao DataFrame as colunas:
-    - PERCENTUAL_PREENCHIMENTO
-    - QUALIDADE_PREENCHIMENTO
-    - ALERTA_OBRIGATORIOS
-    """
-
     df = df.copy()
 
     campos_avaliados = CAMPOS_AVALIADOS_POR_AGRAVO.get(
@@ -247,10 +208,6 @@ def adicionar_qualidade_ficha(df, agravo):
 
 
 def resumo_qualidade_ficha(df):
-    """
-    Retorna os indicadores gerais de qualidade das fichas.
-    """
-
     if df.empty or "PERCENTUAL_PREENCHIMENTO" not in df.columns:
         return {
             "media": 0,
@@ -289,3 +246,23 @@ def resumo_qualidade_ficha(df):
         "boas": int(boas),
         "alertas": int(alertas),
     }
+
+
+def colocar_qualidade_no_inicio(df):
+    colunas_prioritarias = [
+        "PERCENTUAL_PREENCHIMENTO",
+        "QUALIDADE_PREENCHIMENTO",
+        "ALERTA_OBRIGATORIOS",
+    ]
+
+    colunas_existentes = [
+        col for col in colunas_prioritarias
+        if col in df.columns
+    ]
+
+    demais_colunas = [
+        col for col in df.columns
+        if col not in colunas_existentes
+    ]
+
+    return df[colunas_existentes + demais_colunas]
