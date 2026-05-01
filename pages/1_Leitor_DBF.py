@@ -265,65 +265,7 @@ else:
         "Por enquanto, utilize a auditoria e os dados decodificados nesta página."
     )
 
-
-# ============================================================
-# QUALIDADE DAS FICHAS
-# ============================================================
-
 df_exibicao = df_publico.copy()
-
-if df_exibicao.empty:
-    st.warning("Nenhum registro encontrado.")
-    st.stop()
-
-df_exibicao = adicionar_qualidade_ficha(
-    df_exibicao,
-    agravo_confirmado
-)
-
-df_exibicao = colocar_qualidade_no_inicio(df_exibicao)
-
-resumo = resumo_qualidade_ficha(df_exibicao)
-
-st.markdown("## 🧾 Qualidade do Preenchimento das Fichas")
-
-q1, q2, q3, q4, q5 = st.columns(5)
-
-q1.metric("Média", f"{resumo['media']}%")
-q2.metric("🚩 Ruins", resumo["ruins"])
-q3.metric("🟨 Medianas", resumo["medianas"])
-q4.metric("🟩 Boas", resumo["boas"])
-q5.metric("⚠️ Obrigatórios ausentes", resumo["alertas"])
-
-
-# ============================================================
-# DADOS DECODIFICADOS
-# ============================================================
-
-st.markdown("---")
-st.markdown("## 📋 Dados Decodificados")
-
-st.dataframe(
-    df_exibicao,
-    use_container_width=True,
-    height=650,
-    column_config={
-        "PERCENTUAL_PREENCHIMENTO": st.column_config.ProgressColumn(
-            "Preenchimento da ficha",
-            help="Percentual estimado de variáveis preenchidas.",
-            format="%.1f%%",
-            min_value=0,
-            max_value=100,
-        ),
-        "QUALIDADE_PREENCHIMENTO": st.column_config.TextColumn(
-            "Qualidade"
-        ),
-        "ALERTA_OBRIGATORIOS": st.column_config.TextColumn(
-            "Campos obrigatórios"
-        ),
-    }
-)
-
 
 # ============================================================
 # ESTRUTURA DO DBF
