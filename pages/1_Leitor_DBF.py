@@ -2,17 +2,46 @@ import tempfile
 import streamlit as st
 import pandas as pd
 
-from utils.leitor_dbf import ler_dbf_com_diagnostico, resumo_dbf
-from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
-from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
+from utils.leitor_dbf import (
+    ler_dbf_com_diagnostico,
+    resumo_dbf
+)
+
+from utils.tema import (
+    aplicar_tema_streamlit,
+    aplicar_tema_plotly
+)
+
+from utils.auditoria_sinan import (
+    inferir_agravo,
+    gerar_auditoria_sinan
+)
+
 from utils.qualidade_ficha import (
     adicionar_qualidade_ficha,
     colocar_qualidade_no_inicio,
     resumo_qualidade_ficha,
 )
-from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
+
+from mappings.acidente_trabalho_grave import (
+    aplicar_mapeamento,
+    gerar_tabela_publica
+)
+
+from mappings.violencia import (
+    aplicar_mapeamento_violencia,
+    gerar_tabela_publica_violencia
+)
+
 from config.agravos import AGRAVOS
-from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
+
+from modulos.painel_acidente_trabalho import (
+    render_painel_acidente_trabalho
+)
+
+from modulos.painel_violencia import (
+    render_painel_violencia
+)
 
 
 # ============================================================
@@ -39,7 +68,7 @@ st.markdown("""
     <h1>🗂️ Leitor Inteligente de Bancos DBF — SINAN</h1>
     <p>
         Plataforma inteligente para leitura, auditoria epidemiológica,
-        decodificação e análise de bancos DBF do SINAN.
+        decodificação, análise e exploração de bancos DBF do SINAN.
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -120,22 +149,33 @@ agravo_confirmado = st.selectbox(
 if agravo_confirmado != agravo_detectado:
     confianca = "Manual"
     motivo = "Agravo alterado manualmente pelo usuário."
-    ficha_sugerida = AGRAVOS[agravo_confirmado].get("ficha", "Ficha não informada")
+    ficha_sugerida = AGRAVOS[agravo_confirmado].get(
+        "ficha",
+        "Ficha não informada"
+    )
 
 
 # ============================================================
-# MAPEAMENTO
+# MAPEAMENTO DOS AGRAVOS
 # ============================================================
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
+
     df = aplicar_mapeamento(df)
     df_publico = gerar_tabela_publica(df)
+
+elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
+
+    df = aplicar_mapeamento_violencia(df)
+    df_publico = gerar_tabela_publica_violencia(df)
+
 else:
+
     df_publico = df.copy()
 
 
 # ============================================================
-# GUARDAR EM MEMÓRIA DA SESSÃO
+# GUARDAR EM MEMÓRIA
 # ============================================================
 
 st.session_state["df_sinan_atual"] = df
@@ -152,10 +192,25 @@ st.markdown("## 🧠 Leitura Inteligente do Banco")
 
 l1, l2, l3, l4 = st.columns(4)
 
-l1.metric("Registros", diagnostico_leitura.get("registros", len(df)))
-l2.metric("Colunas", diagnostico_leitura.get("colunas", len(df.columns)))
-l3.metric("Agravo identificado", agravo_confirmado)
-l4.metric("Confiança", confianca)
+l1.metric(
+    "Registros",
+    diagnostico_leitura.get("registros", len(df))
+)
+
+l2.metric(
+    "Colunas",
+    diagnostico_leitura.get("colunas", len(df.columns))
+)
+
+l3.metric(
+    "Agravo identificado",
+    agravo_confirmado
+)
+
+l4.metric(
+    "Confiança",
+    confianca
+)
 
 st.info(
     f"**Ficha sugerida:** {ficha_sugerida}  \n\n"
@@ -163,7 +218,9 @@ st.info(
 )
 
 if "ranking" in inferido and inferido["ranking"]:
+
     with st.expander("🏁 Ver ranking de possíveis agravos"):
+
         st.dataframe(
             pd.DataFrame(inferido["ranking"]),
             use_container_width=True
@@ -171,73 +228,154 @@ if "ranking" in inferido and inferido["ranking"]:
 
 
 # ============================================================
-# AUDITORIA DO BANCO
+# AUDITORIA
 # ============================================================
 
-auditoria = gerar_auditoria_sinan(df, agravo=agravo_confirmado)
+auditoria = gerar_auditoria_sinan(
+    df,
+    agravo=agravo_confirmado
+)
 
 st.markdown("## 🧪 Auditoria de Qualidade do Banco")
 
-duplicidades_qtd = len(auditoria.get("duplicidades", pd.DataFrame()))
-sexo_incompat_qtd = len(auditoria.get("sexo_incompativel", pd.DataFrame()))
-cid_incompat_qtd = len(auditoria.get("cid_incompativel", pd.DataFrame()))
+duplicidades_qtd = len(
+    auditoria.get("duplicidades", pd.DataFrame())
+)
+
+sexo_incompat_qtd = len(
+    auditoria.get("sexo_incompativel", pd.DataFrame())
+)
+
+cid_incompat_qtd = len(
+    auditoria.get("cid_incompativel", pd.DataFrame())
+)
 
 a1, a2, a3, a4, a5 = st.columns(5)
 
-a1.metric("Score do banco", f"{auditoria.get('score_banco', 0)}%")
-a2.metric("Qualidade", auditoria.get("qualidade_banco", "—"))
-a3.metric("Duplicidades prováveis", duplicidades_qtd)
-a4.metric("Sexo incompatível", sexo_incompat_qtd)
-a5.metric("CID incompatível", cid_incompat_qtd)
+a1.metric(
+    "Score do banco",
+    f"{auditoria.get('score_banco', 0)}%"
+)
+
+a2.metric(
+    "Qualidade",
+    auditoria.get("qualidade_banco", "—")
+)
+
+a3.metric(
+    "Duplicidades prováveis",
+    duplicidades_qtd
+)
+
+a4.metric(
+    "Sexo incompatível",
+    sexo_incompat_qtd
+)
+
+a5.metric(
+    "CID incompatível",
+    cid_incompat_qtd
+)
+
+
+# ============================================================
+# TABELAS DE AUDITORIA
+# ============================================================
 
 b1, b2 = st.columns(2)
 
 with b1:
+
     st.subheader("🏥 Incompletude por unidade")
 
-    incompletude = auditoria.get("incompletude_unidade", pd.DataFrame())
+    incompletude = auditoria.get(
+        "incompletude_unidade",
+        pd.DataFrame()
+    )
 
-    if isinstance(incompletude, pd.DataFrame) and not incompletude.empty:
-        st.dataframe(incompletude, use_container_width=True)
+    if (
+        isinstance(incompletude, pd.DataFrame)
+        and not incompletude.empty
+    ):
+
+        st.dataframe(
+            incompletude,
+            use_container_width=True,
+            height=450
+        )
+
     else:
-        st.info("Não foi possível calcular a incompletude por unidade.")
+
+        st.info(
+            "Não foi possível calcular a incompletude por unidade."
+        )
+
 
 with b2:
+
     st.subheader("🧱 Colunas mais vazias")
 
-    colunas_vazias = auditoria.get("colunas_vazias", pd.DataFrame())
+    colunas_vazias = auditoria.get(
+        "colunas_vazias",
+        pd.DataFrame()
+    )
 
-    if isinstance(colunas_vazias, pd.DataFrame) and not colunas_vazias.empty:
-        st.dataframe(colunas_vazias.head(20), use_container_width=True)
+    if (
+        isinstance(colunas_vazias, pd.DataFrame)
+        and not colunas_vazias.empty
+    ):
+
+        st.dataframe(
+            colunas_vazias.head(20),
+            use_container_width=True,
+            height=450
+        )
+
     else:
-        st.info("Não foram encontradas colunas vazias relevantes.")
+
+        st.info(
+            "Não foram encontradas colunas vazias relevantes."
+        )
+
+
+# ============================================================
+# DETALHAMENTO DAS INCONSISTÊNCIAS
+# ============================================================
 
 with st.expander("🔍 Ver inconsistências detalhadas"):
+
     st.markdown("### Duplicidades prováveis")
+
     st.dataframe(
         auditoria.get("duplicidades", pd.DataFrame()),
         use_container_width=True
     )
 
     st.markdown("### Sexo incompatível")
+
     st.dataframe(
         auditoria.get("sexo_incompativel", pd.DataFrame()),
         use_container_width=True
     )
 
     st.markdown("### Idade incompatível")
+
     st.dataframe(
         auditoria.get("idade_incompativel", pd.DataFrame()),
         use_container_width=True
     )
 
     st.markdown("### CID incompatível")
+
     st.dataframe(
         auditoria.get("cid_incompativel", pd.DataFrame()),
         use_container_width=True
     )
 
-    st.markdown("### Município de notificação diferente do município de residência")
+    st.markdown(
+        "### Município de notificação diferente do município de residência"
+    )
+
     st.dataframe(
         auditoria.get("municipio_divergente", pd.DataFrame()),
         use_container_width=True
@@ -245,7 +383,7 @@ with st.expander("🔍 Ver inconsistências detalhadas"):
 
 
 # ============================================================
-# BOTÃO PARA PAINEL ESPECÍFICO
+# ABERTURA DOS PAINÉIS
 # ============================================================
 
 st.markdown("---")
@@ -257,15 +395,39 @@ if agravo_confirmado == "Acidente de Trabalho Grave":
         "👷 Abrir Painel Analítico — Acidente de Trabalho Grave",
         use_container_width=True
     ):
-        st.session_state["abrir_painel_acidente_trabalho"] = True
+
+        st.session_state[
+            "abrir_painel_acidente_trabalho"
+        ] = True
+
+        st.session_state[
+            "abrir_painel_violencia"
+        ] = False
+
+
+elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
+
+    if st.button(
+        "🛡️ Abrir Painel Analítico — Violência Interpessoal/Autoprovocada",
+        use_container_width=True
+    ):
+
+        st.session_state[
+            "abrir_painel_violencia"
+        ] = True
+
+        st.session_state[
+            "abrir_painel_acidente_trabalho"
+        ] = False
+
 
 else:
+
     st.info(
-        "Este agravo já foi reconhecido, mas o painel específico ainda será criado. "
-        "Por enquanto, utilize a auditoria e os dados decodificados nesta página."
+        "Este agravo já foi reconhecido, "
+        "mas o painel específico ainda será criado."
     )
 
-df_exibicao = df_publico.copy()
 
 # ============================================================
 # ESTRUTURA DO DBF
@@ -274,27 +436,41 @@ df_exibicao = df_publico.copy()
 st.markdown("---")
 
 with st.expander("🧱 Estrutura do DBF"):
+
     try:
+
         st.dataframe(
             resumo_dbf(df),
             use_container_width=True,
             height=500
         )
+
     except Exception:
+
         estrutura = pd.DataFrame({
-            "Campo": df_exibicao.columns,
-            "Tipo": [str(df_exibicao[c].dtype) for c in df_exibicao.columns],
-            "Valores preenchidos": [
-                int(df_exibicao[c].notna().sum())
-                for c in df_exibicao.columns
+
+            "Campo": df.columns,
+
+            "Tipo": [
+                str(df[c].dtype)
+                for c in df.columns
             ],
+
+            "Valores preenchidos": [
+                int(df[c].notna().sum())
+                for c in df.columns
+            ],
+
             "Percentual preenchido": [
+
                 round(
-                    (df_exibicao[c].notna().sum() / len(df_exibicao)) * 100,
+                    (df[c].notna().sum() / len(df)) * 100,
                     1
                 )
-                if len(df_exibicao) > 0 else 0
-                for c in df_exibicao.columns
+
+                if len(df) > 0 else 0
+
+                for c in df.columns
             ]
         })
 
@@ -313,18 +489,40 @@ st.markdown("---")
 
 st.download_button(
     "📥 Baixar dados decodificados em CSV",
-    data=df_exibicao.to_csv(index=False).encode("utf-8"),
+    data=df_publico.to_csv(index=False).encode("utf-8"),
     file_name="dados_decodificados.csv",
     mime="text/csv"
 )
 
 
 # ============================================================
-# RENDERIZA PAINEL ESPECÍFICO ABAIXO
+# RENDERIZAÇÃO DOS PAINÉIS
 # ============================================================
 
-if st.session_state.get("abrir_painel_acidente_trabalho", False):
+if st.session_state.get(
+    "abrir_painel_acidente_trabalho",
+    False
+):
+
     st.markdown("---")
+
     render_painel_acidente_trabalho(df)
 
-st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 6")
+
+if st.session_state.get(
+    "abrir_painel_violencia",
+    False
+):
+
+    st.markdown("---")
+
+    render_painel_violencia(df)
+
+
+# ============================================================
+# RODAPÉ
+# ============================================================
+
+st.caption(
+    "SINAN Decoder • Leitor DBF Inteligente • Versão 7"
+)
