@@ -1,21 +1,35 @@
+import tempfile
 import streamlit as st
 import pandas as pd
-import os
 
-from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
-from utils.dbf_loader import carregar_dbf
-from utils.detectar_agravo import detectar_agravo
-from utils.auditoria_sinan import auditar_banco
+from utils.leitor_dbf import (
+    ler_dbf_com_diagnostico,
+    resumo_dbf
+)
+
+from utils.tema import (
+    aplicar_tema_streamlit,
+    aplicar_tema_plotly
+)
+
+from utils.auditoria_sinan import (
+    inferir_agravo,
+    gerar_auditoria_sinan
+)
+
 from utils.qualidade_ficha import (
     adicionar_qualidade_ficha,
     colocar_qualidade_no_inicio,
-    resumo_qualidade_ficha
+    resumo_qualidade_ficha,
 )
 
 from mappings.acidente_trabalho_grave import (
     aplicar_mapeamento,
     gerar_tabela_publica
 )
+
+from config.agravos import AGRAVOS
+
 
 # ============================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -30,6 +44,7 @@ st.set_page_config(
 aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
 
+
 # ============================================================
 # CABEÇALHO
 # ============================================================
@@ -38,12 +53,13 @@ st.markdown("""
 <div class="mb-header">
     <h1>🗂️ Leitor Inteligente de Bancos DBF — SINAN</h1>
     <p>
-        Plataforma inteligente para leitura, auditoria,
-        análise epidemiológica e decodificação de bancos
-        DBF do SINAN.
+        Plataforma inteligente para leitura,
+        auditoria epidemiológica, decodificação,
+        análise e exploração de bancos DBF do SINAN.
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 # ============================================================
 # UPLOAD
@@ -52,16 +68,17 @@ st.markdown("""
 st.markdown("## 📤 Upload do banco DBF")
 
 arquivo = st.file_uploader(
-    "Selecione o banco DBF",
+    "Selecione o arquivo DBF",
     type=["dbf"]
 )
 
 if arquivo is None:
-    st.info("Envie um arquivo DBF do SINAN para iniciar.")
+    st.info("Envie um banco DBF do SINAN para iniciar.")
     st.stop()
 
+
 # ============================================================
-# LIMITAR TAMANHO
+# LIMITE DE TAMANHO
 # ============================================================
 
 tamanho_mb = arquivo.size / (1024 * 1024)
@@ -70,57 +87,56 @@ if tamanho_mb > 100:
     st.error("❌ O arquivo excede o limite atual de 100MB.")
     st.stop()
 
-# ============================================================
-# SALVAR TEMPORÁRIO
-# ============================================================
-
-os.makedirs("temp", exist_ok=True)
-
-caminho_temp = os.path.join("temp", arquivo.name)
-
-with open(caminho_temp, "wb") as f:
-    f.write(arquivo.read())
 
 # ============================================================
-# CARREGAR DBF
+# LEITURA DO DBF
 # ============================================================
 
-with st.spinner("📖 Lendo banco DBF..."):
+with tempfile.NamedTemporaryFile(delete=False, suffix=".DBF") as tmp:
+    tmp.write(arquivo.read())
+    caminho_tmp = tmp.name
 
-    try:
-        df = carregar_dbf(caminho_temp)
+try:
+    df, diagnostico_leitura = ler_dbf_com_diagnostico(caminho_tmp)
 
-    except Exception as e:
-        st.error(f"Erro ao carregar DBF: {e}")
-        st.stop()
+except Exception as e:
+    st.error(f"Erro ao ler o arquivo DBF: {e}")
+    st.stop()
 
 if df.empty:
     st.warning("O banco enviado não possui registros.")
     st.stop()
 
+
 # ============================================================
 # DETECÇÃO DE AGRAVO
 # ============================================================
 
-agravo_detectado = detectar_agravo(df)
+agravo_detectado = inferir_agravo(df)
+
+nomes_agravos = list(AGRAVOS.keys())
+
+if agravo_detectado in nomes_agravos:
+    idx = nomes_agravos.index(agravo_detectado)
+else:
+    idx = 0
 
 agravo_confirmado = st.selectbox(
-    "🩺 Agravo identificado",
-    [
-        "Acidente de Trabalho Grave",
-        "Acidente de Trabalho com Exposição a Material Biológico",
-    ],
-    index=0 if agravo_detectado == "Acidente de Trabalho Grave" else 1
+    "🩺 Selecione o agravo",
+    nomes_agravos,
+    index=idx
 )
 
+
 # ============================================================
-# APLICAR MAPEAMENTO
+# MAPEAMENTO
 # ============================================================
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
     df = aplicar_mapeamento(df)
 
-df_busca = gerar_tabela_publica(df)
+df_publico = gerar_tabela_publica(df)
+
 
 # ============================================================
 # LEITURA INTELIGENTE
@@ -151,11 +167,12 @@ c3.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
 # AUDITORIA
 # ============================================================
 
-auditoria = auditar_banco(df)
+auditoria = gerar_auditoria_sinan(df)
 
 st.markdown("## 🧪 Auditoria de Qualidade do Banco")
 
@@ -189,23 +206,26 @@ a4.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
-# BOTÃO PARA PAINEL ESPECÍFICO
+# BOTÃO PARA O PAINEL
 # ============================================================
 
 st.markdown("---")
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
 
+    st.session_state["df_dbf"] = df
+
     if st.button("👷 Abrir Painel Analítico — Acidente de Trabalho Grave"):
-        st.session_state["df_dbf"] = df
         st.switch_page("pages/2_Painel_Acidente_Trabalho.py")
+
 
 # ============================================================
 # QUALIDADE DAS FICHAS
 # ============================================================
 
-df_exibicao = df_busca.copy()
+df_exibicao = df_publico.copy()
 
 if df_exibicao.empty:
     st.warning("Nenhum registro encontrado.")
@@ -249,6 +269,7 @@ q5.metric(
     resumo["alertas"]
 )
 
+
 # ============================================================
 # DADOS DECODIFICADOS
 # ============================================================
@@ -282,6 +303,7 @@ st.dataframe(
     }
 )
 
+
 # ============================================================
 # ESTRUTURA DO DBF
 # ============================================================
@@ -292,17 +314,24 @@ with st.expander("🧱 Estrutura do DBF"):
 
     estrutura = pd.DataFrame({
         "Campo": df_exibicao.columns,
-        "Tipo": [str(df_exibicao[c].dtype) for c in df_exibicao.columns],
+
+        "Tipo": [
+            str(df_exibicao[c].dtype)
+            for c in df_exibicao.columns
+        ],
+
         "Valores preenchidos": [
             int(df_exibicao[c].notna().sum())
             for c in df_exibicao.columns
         ],
+
         "Percentual preenchido": [
             round(
                 (df_exibicao[c].notna().sum() / len(df_exibicao)) * 100,
                 1
             )
             if len(df_exibicao) > 0 else 0
+
             for c in df_exibicao.columns
         ]
     })
@@ -312,6 +341,7 @@ with st.expander("🧱 Estrutura do DBF"):
         use_container_width=True,
         height=500
     )
+
 
 # ============================================================
 # DOWNLOAD
