@@ -14,4 +14,12 @@ AGRAVOS = {
     "Intoxicação Exógena": {
         "ficha": "INTOXICAÇÃO EXÓGENA.pdf"
     },
+
+    "Leptospirose": {
+        "ficha": "LEPTOSPIROSE.pdf"
+    },
+
+    "Toxoplasmose": {
+        "ficha": "FICHA-DE-NOTIFICACAO-TOXOPLASMOSE.pdf"
+    },
 }
