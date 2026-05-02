@@ -49,8 +49,9 @@ if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
 
 
 st.markdown("""
-<div class="mb-header">
-    <h1>🗂️ Leitor Inteligente de Bancos DBF — SINAN</h1>
+<div class="hz-hero">
+    <span class="hz-kicker">Horizonte Health Intelligence</span>
+    <h1>Leitor Inteligente de Bancos DBF — SINAN</h1>
     <p>
         Upload, leitura inteligente, detecção automática do agravo,
         auditoria de qualidade e acesso aos painéis analíticos.
@@ -402,4 +403,4 @@ if st.session_state.get("abrir_painel_toxoplasmose", False):
     render_painel_toxoplasmose(df)
 
 
-st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 11")
+st.caption("Horizonte Health Intelligence • Leitor DBF SINAN • Beta 1")
