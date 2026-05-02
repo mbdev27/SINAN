@@ -65,7 +65,6 @@ def detectar_colunas_vazias(df):
         })
 
     resultado = pd.DataFrame(resultado)
-
     resultado = resultado.sort_values("Preenchimento (%)")
 
     return resultado.reset_index(drop=True)
@@ -329,133 +328,62 @@ def inferir_agravo(df, nome_arquivo=""):
 
     ranking = []
 
-    score_acidente = 0
-    termos_acidente = [
-        "CID",
-        "ACID",
-        "OCUPA",
-        "EVOLUCAO",
-        "CAT",
-        "TRAB"
-    ]
-    encontrados_acidente = []
+    def pontuar(nome_agravo, termos, bonus_arquivo):
+        score = 0
+        encontrados = []
 
-    for termo in termos_acidente:
-        if any(termo in c for c in colunas):
-            score_acidente += 1
-            encontrados_acidente.append(termo)
+        for termo in termos:
+            if any(termo in c for c in colunas):
+                score += 1
+                encontrados.append(termo)
 
-    if "ACIDENTE" in nome_arquivo or "ACID" in nome_arquivo:
-        score_acidente += 2
-        encontrados_acidente.append("NOME_ARQUIVO")
+        for termo_arquivo in bonus_arquivo:
+            if termo_arquivo in nome_arquivo:
+                score += 3
+                encontrados.append("NOME_ARQUIVO")
+                break
 
-    ranking.append({
-        "Agravo": "Acidente de Trabalho Grave",
-        "Score": score_acidente,
-        "Colunas identificadas": ", ".join(encontrados_acidente)
-    })
+        ranking.append({
+            "Agravo": nome_agravo,
+            "Score": score,
+            "Colunas identificadas": ", ".join(encontrados)
+        })
 
-    score_violencia = 0
-    termos_violencia = [
-        "VIOL",
-        "AGRESS",
-        "AUTOR",
-        "SEXUAL",
-        "LES_AUTOP",
-        "REL_TRAB"
-    ]
-    encontrados_violencia = []
+    pontuar(
+        "Acidente de Trabalho Grave",
+        ["CID", "ACID", "OCUPA", "EVOLUCAO", "CAT", "TRAB"],
+        ["ACIDENTE", "ACID"]
+    )
 
-    for termo in termos_violencia:
-        if any(termo in c for c in colunas):
-            score_violencia += 1
-            encontrados_violencia.append(termo)
+    pontuar(
+        "Violência Interpessoal/Autoprovocada",
+        ["VIOL", "AGRESS", "AUTOR", "SEXUAL", "LES_AUTOP", "REL_TRAB"],
+        ["VIOL"]
+    )
 
-    if "VIOL" in nome_arquivo:
-        score_violencia += 2
-        encontrados_violencia.append("NOME_ARQUIVO")
+    pontuar(
+        "Dengue/Chikungunya",
+        ["FEBRE", "MIALGIA", "CEFALEIA", "EXANTEMA", "SOROTIPO", "CLASSI_FIN", "CRITERIO", "ALRM", "GRAV", "RESUL_NS1", "RESUL_SORO", "DENGUE", "CHIK"],
+        ["DENG", "CHIK", "ARBOV"]
+    )
 
-    ranking.append({
-        "Agravo": "Violência Interpessoal/Autoprovocada",
-        "Score": score_violencia,
-        "Colunas identificadas": ", ".join(encontrados_violencia)
-    })
+    pontuar(
+        "Intoxicação Exógena",
+        ["TOX", "INTOX", "AGENTE", "AGENT", "EXPOS", "EXPO", "CIRCUNST", "CLASSI_FIN", "CRITERIO", "HOSPITALIZ", "DT_INTERNA", "EVOLUCAO", "TP_ATEND", "GRUPO_AGEN"],
+        ["IEXOG", "INTOX", "EXOG", "TOX"]
+    )
 
-    score_arbovirose = 0
-    termos_arbovirose = [
-        "FEBRE",
-        "MIALGIA",
-        "CEFALEIA",
-        "EXANTEMA",
-        "SOROTIPO",
-        "CLASSI_FIN",
-        "CRITERIO",
-        "ALRM",
-        "GRAV",
-        "RESUL_NS1",
-        "RESUL_SORO",
-        "DENGUE",
-        "CHIK"
-    ]
-    encontrados_arbovirose = []
+    pontuar(
+        "Leptospirose",
+        ["LEPTO", "MIALGIA", "ICTERICIA", "PANTUR", "INSUF_RENAL", "ROEDOR", "ROEDORES", "ENCHENTE", "LAMA", "ESGOTO", "SOROVAR", "MICRO", "ELISA"],
+        ["LEPTO", "LEPTOSPIROSE"]
+    )
 
-    for termo in termos_arbovirose:
-        if any(termo in c for c in colunas):
-            score_arbovirose += 1
-            encontrados_arbovirose.append(termo)
-
-    if (
-        "DENG" in nome_arquivo
-        or "CHIK" in nome_arquivo
-        or "ARBOV" in nome_arquivo
-    ):
-        score_arbovirose += 3
-        encontrados_arbovirose.append("NOME_ARQUIVO")
-
-    ranking.append({
-        "Agravo": "Dengue/Chikungunya",
-        "Score": score_arbovirose,
-        "Colunas identificadas": ", ".join(encontrados_arbovirose)
-    })
-
-    score_intoxicacao = 0
-    termos_intoxicacao = [
-        "TOX",
-        "INTOX",
-        "AGENTE",
-        "AGENT",
-        "EXPOS",
-        "EXPO",
-        "CIRCUNST",
-        "CLASSI_FIN",
-        "CRITERIO",
-        "HOSPITALIZ",
-        "DT_INTERNA",
-        "EVOLUCAO",
-        "TP_ATEND",
-        "GRUPO_AGEN"
-    ]
-    encontrados_intoxicacao = []
-
-    for termo in termos_intoxicacao:
-        if any(termo in c for c in colunas):
-            score_intoxicacao += 1
-            encontrados_intoxicacao.append(termo)
-
-    if (
-        "IEXOG" in nome_arquivo
-        or "INTOX" in nome_arquivo
-        or "EXOG" in nome_arquivo
-        or "TOX" in nome_arquivo
-    ):
-        score_intoxicacao += 4
-        encontrados_intoxicacao.append("NOME_ARQUIVO")
-
-    ranking.append({
-        "Agravo": "Intoxicação Exógena",
-        "Score": score_intoxicacao,
-        "Colunas identificadas": ", ".join(encontrados_intoxicacao)
-    })
+    pontuar(
+        "Toxoplasmose",
+        ["TOXO", "TOXOPLAS", "CLASSI_FIN", "CRITERIO", "EVOLUCAO", "TPAUTOCTO", "DT_ENCERRA", "CS_GESTANT"],
+        ["TOXO", "TOXOPLASMOSE", "GESTACIONAL", "CONGENITA", "CONGÊNITA"]
+    )
 
     ranking = sorted(
         ranking,
