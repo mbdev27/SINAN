@@ -1,12 +1,32 @@
+import tempfile
 import streamlit as st
+import pandas as pd
 
+from utils.leitor_dbf import ler_dbf_com_diagnostico, resumo_dbf
 from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
 from utils.auth import exigir_login, fazer_logout, obter_usuario_atual
+from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
+
+from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
+from mappings.violencia import aplicar_mapeamento_violencia, gerar_tabela_publica_violencia
+from mappings.arbovirose import aplicar_mapeamento_arbovirose, gerar_tabela_publica_arbovirose
+from mappings.intoxicacao_exogena import aplicar_mapeamento_intoxicacao_exogena, gerar_tabela_publica_intoxicacao_exogena
+from mappings.leptospirose import aplicar_mapeamento_leptospirose, gerar_tabela_publica_leptospirose
+from mappings.toxoplasmose import aplicar_mapeamento_toxoplasmose, gerar_tabela_publica_toxoplasmose
+
+from config.agravos import AGRAVOS
+
+from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
+from modulos.painel_violencia import render_painel_violencia
+from modulos.painel_arbovirose import render_painel_arbovirose
+from modulos.painel_intoxicacao_exogena import render_painel_intoxicacao_exogena
+from modulos.painel_leptospirose import render_painel_leptospirose
+from modulos.painel_toxoplasmose import render_painel_toxoplasmose
 
 
 st.set_page_config(
-    page_title="Página Inicial",
-    page_icon="🏠",
+    page_title="Leitor DBF SINAN",
+    page_icon="🗂️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -30,234 +50,356 @@ if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
 
 st.markdown("""
 <div class="mb-header">
-    <h1>🏠 MB Health Intelligence</h1>
+    <h1>🗂️ Leitor Inteligente de Bancos DBF — SINAN</h1>
     <p>
-        Inteligência epidemiológica aplicada ao SUS.
-        Uma plataforma da MB Technological Solutions®.
+        Upload, leitura inteligente, detecção automática do agravo,
+        auditoria de qualidade e acesso aos painéis analíticos.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
 
-st.markdown("## Transformando bancos SINAN em inteligência para decisão")
+st.markdown("## 📤 Upload do banco DBF")
 
-st.markdown("""
-A **MB Health Intelligence** é uma plataforma desenvolvida para apoiar a Vigilância em Saúde
-na leitura, auditoria, qualificação e análise de bancos epidemiológicos do SINAN.
+arquivo = st.file_uploader(
+    "Selecione o arquivo DBF",
+    type=["dbf"]
+)
 
-O projeto nasce de uma dor real dos serviços públicos de saúde: muitos municípios possuem
-grande volume de dados, mas enfrentam dificuldades para transformar bancos DBF, fichas de
-notificação e registros codificados em informação útil para gestão, planejamento e resposta
-oportuna.
-
-A proposta da **MB Technological Solutions®** é criar uma ponte entre tecnologia, vigilância
-epidemiológica e gestão pública. Não se trata apenas de visualizar dados, mas de qualificar
-a informação, revelar inconsistências e apoiar decisões com evidências.
-""")
+if arquivo is None:
+    st.info("Envie um banco DBF do SINAN para iniciar.")
+    st.stop()
 
 
-st.markdown("## 🧠 O que a ferramenta faz")
+tamanho_mb = arquivo.size / (1024 * 1024)
 
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>📂 Lê bancos DBF</h3>
-        <p>
-            Permite o upload de arquivos DBF do SINAN e realiza a leitura estruturada
-            dos dados, mesmo quando os bancos possuem campos codificados.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c2:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>🔎 Reconhece o agravo</h3>
-        <p>
-            Analisa automaticamente o banco enviado e sugere o agravo correspondente,
-            permitindo ao usuário confirmar ou alterar manualmente.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c3:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>🧪 Audita a qualidade</h3>
-        <p>
-            Calcula score do banco, identifica colunas vazias, duplicidades prováveis,
-            inconsistências e preenchimento das fichas de notificação.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+if tamanho_mb > 100:
+    st.error("❌ O arquivo excede o limite atual de 100MB.")
+    st.stop()
 
 
-c4, c5, c6 = st.columns(3)
+with tempfile.NamedTemporaryFile(delete=False, suffix=".DBF") as tmp:
+    tmp.write(arquivo.read())
+    caminho_tmp = tmp.name
 
-with c4:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>📊 Gera painéis</h3>
-        <p>
-            Apresenta dashboards interativos por agravo, com indicadores,
-            filtros, gráficos e tabelas decodificadas.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+try:
+    df, diagnostico_leitura = ler_dbf_com_diagnostico(caminho_tmp)
 
-with c5:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>🧾 Qualifica fichas</h3>
-        <p>
-            Mede o percentual de preenchimento por notificação e sinaliza fichas ruins,
-            medianas ou boas, além de campos obrigatórios ausentes.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Erro ao ler o arquivo DBF: {e}")
+    st.stop()
 
-with c6:
-    st.markdown("""
-    <div class="mb-card">
-        <h3>📥 Exporta dados</h3>
-        <p>
-            Permite baixar dados decodificados e filtrados em CSV, apoiando relatórios,
-            análises complementares e prestação de contas.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+if df.empty:
+    st.warning("O banco enviado não possui registros.")
+    st.stop()
 
 
-st.markdown("## 🚀 Como usar a plataforma")
+inferido = inferir_agravo(df, arquivo.name)
 
-st.markdown("""
-1. No menu lateral, acesse **Leitor DBF**.
-2. Envie o arquivo DBF do SINAN.
-3. Aguarde a leitura inteligente do banco.
-4. Confira o agravo identificado automaticamente.
-5. Ajuste o agravo manualmente, se necessário.
-6. Consulte a auditoria de qualidade do banco.
-7. Abra o painel analítico específico.
-8. Use os filtros, gráficos e tabelas para análise.
-9. Exporte os dados decodificados quando precisar.
-""")
+agravo_detectado = inferido.get("agravo", "Não identificado")
+confianca = inferido.get("confianca", "Baixa")
+motivo = inferido.get("motivo", "Sem justificativa disponível.")
+ficha_sugerida = inferido.get("ficha_sugerida", "Selecionar manualmente")
 
+nomes_agravos = list(AGRAVOS.keys())
 
-st.markdown("## 🧩 Módulos analíticos")
+if agravo_detectado in nomes_agravos:
+    idx = nomes_agravos.index(agravo_detectado)
+else:
+    idx = 0
 
-m1, m2, m3 = st.columns(3)
+agravo_confirmado = st.selectbox(
+    "🩺 Agravo identificado",
+    nomes_agravos,
+    index=idx,
+    help="O sistema sugere automaticamente o agravo, mas você pode alterar manualmente."
+)
 
-with m1:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>👷 Saúde do Trabalhador</h4>
-        <p>
-            Análise de acidentes de trabalho graves, exposição ocupacional,
-            evolução, CAT, ocupação e qualidade das notificações.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m2:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🛡️ Violência Interpessoal/Autoprovocada</h4>
-        <p>
-            Perfil das vítimas, tipos de violência, meios de agressão,
-            provável autor, encaminhamentos e recorrência.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m3:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🦟 Arboviroses</h4>
-        <p>
-            Dengue e Chikungunya, classificação final, sinais clínicos,
-            sinais de alarme, dengue grave e exames laboratoriais.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-m4, m5, m6 = st.columns(3)
-
-with m4:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>☣️ Intoxicação Exógena</h4>
-        <p>
-            Grupo do agente tóxico, local, circunstância, via de exposição,
-            hospitalização, relação com trabalho e evolução.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m5:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🐀 Leptospirose</h4>
-        <p>
-            Situações de risco, sinais clínicos, hospitalização,
-            classificação, critério de confirmação e evolução do caso.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m6:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🧬 Toxoplasmose</h4>
-        <p>
-            Toxoplasmose adquirida, gestacional e congênita,
-            com análise de classificação, critério, evolução e perfil.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+if agravo_confirmado != agravo_detectado:
+    confianca = "Manual"
+    motivo = "Agravo alterado manualmente pelo usuário."
+    ficha_sugerida = AGRAVOS[agravo_confirmado].get("ficha", "Ficha não informada")
 
 
-st.markdown("## 💼 Sobre a MB Technological Solutions®")
+if agravo_confirmado == "Acidente de Trabalho Grave":
 
-st.markdown("""
-A **MB Technological Solutions®** nasce com a missão de desenvolver soluções digitais
-para problemas reais da gestão pública, especialmente no campo da saúde coletiva,
-vigilância em saúde e inteligência de dados.
+    df = aplicar_mapeamento(df)
+    df_publico = gerar_tabela_publica(df)
 
-A empresa combina conhecimento técnico-sanitário, desenvolvimento tecnológico e visão
-estratégica para criar ferramentas capazes de reduzir trabalho manual, qualificar
-processos e apoiar decisões baseadas em evidências.
+elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
 
-A visão é evoluir a plataforma para um produto SaaS de inteligência epidemiológica,
-com múltiplos agravos, login por município, banco histórico, relatórios automáticos,
-alertas, integração com inteligência artificial e suporte à gestão regional e estadual.
-""")
+    df = aplicar_mapeamento_violencia(df)
+    df_publico = gerar_tabela_publica_violencia(df)
+
+elif agravo_confirmado == "Dengue/Chikungunya":
+
+    df = aplicar_mapeamento_arbovirose(df)
+    df_publico = gerar_tabela_publica_arbovirose(df)
+
+elif agravo_confirmado == "Intoxicação Exógena":
+
+    df = aplicar_mapeamento_intoxicacao_exogena(df)
+    df_publico = gerar_tabela_publica_intoxicacao_exogena(df)
+
+elif agravo_confirmado == "Leptospirose":
+
+    df = aplicar_mapeamento_leptospirose(df)
+    df_publico = gerar_tabela_publica_leptospirose(df)
+
+elif agravo_confirmado == "Toxoplasmose":
+
+    df = aplicar_mapeamento_toxoplasmose(df, arquivo.name)
+    df_publico = gerar_tabela_publica_toxoplasmose(df)
+
+else:
+
+    df_publico = df.copy()
 
 
-st.markdown("## 🌎 Visão de futuro")
+st.session_state["df_sinan_atual"] = df
+st.session_state["df_sinan_publico"] = df_publico
+st.session_state["agravo_sinan_atual"] = agravo_confirmado
+st.session_state["ficha_sinan_atual"] = ficha_sugerida
 
-st.markdown("""
-A plataforma foi construída para crescer de forma modular. Cada novo agravo incorporado
-aumenta a capacidade analítica do sistema e amplia seu valor para municípios, regionais,
-estados, instituições de pesquisa e equipes técnicas.
 
-O objetivo é criar uma camada moderna de inteligência sobre sistemas legados do SUS,
-transformando bancos brutos em informação viva: clara, visual, auditável e acionável.
-""")
+st.markdown("## 🧠 Leitura Inteligente do Banco")
+
+l1, l2, l3, l4 = st.columns(4)
+
+l1.metric("Registros", diagnostico_leitura.get("registros", len(df)))
+l2.metric("Colunas", diagnostico_leitura.get("colunas", len(df.columns)))
+l3.metric("Agravo identificado", agravo_confirmado)
+l4.metric("Confiança", confianca)
+
+st.info(
+    f"**Ficha sugerida:** {ficha_sugerida}  \n\n"
+    f"**Motivo:** {motivo}"
+)
+
+if "ranking" in inferido and inferido["ranking"]:
+    with st.expander("🏁 Ver ranking de possíveis agravos"):
+        st.dataframe(
+            pd.DataFrame(inferido["ranking"]),
+            use_container_width=True
+        )
+
+
+auditoria = gerar_auditoria_sinan(
+    df,
+    agravo=agravo_confirmado
+)
+
+st.markdown("## 🧪 Auditoria de Qualidade do Banco")
+
+duplicidades_qtd = len(auditoria.get("duplicidades", pd.DataFrame()))
+sexo_incompat_qtd = len(auditoria.get("sexo_incompativel", pd.DataFrame()))
+cid_incompat_qtd = len(auditoria.get("cid_incompativel", pd.DataFrame()))
+
+a1, a2, a3, a4, a5 = st.columns(5)
+
+a1.metric("Score do banco", f"{auditoria.get('score_banco', 0)}%")
+a2.metric("Qualidade", auditoria.get("qualidade_banco", "—"))
+a3.metric("Duplicidades prováveis", duplicidades_qtd)
+a4.metric("Sexo incompatível", sexo_incompat_qtd)
+a5.metric("CID incompatível", cid_incompat_qtd)
+
+
+b1, b2 = st.columns(2)
+
+with b1:
+    st.subheader("🏥 Incompletude por unidade")
+
+    incompletude = auditoria.get("incompletude_unidade", pd.DataFrame())
+
+    if isinstance(incompletude, pd.DataFrame) and not incompletude.empty:
+        st.dataframe(
+            incompletude,
+            use_container_width=True,
+            height=450
+        )
+    else:
+        st.info("Não foi possível calcular a incompletude por unidade.")
+
+with b2:
+    st.subheader("🧱 Colunas mais vazias")
+
+    colunas_vazias = auditoria.get("colunas_vazias", pd.DataFrame())
+
+    if isinstance(colunas_vazias, pd.DataFrame) and not colunas_vazias.empty:
+        st.dataframe(
+            colunas_vazias.head(20),
+            use_container_width=True,
+            height=450
+        )
+    else:
+        st.info("Não foram encontradas colunas vazias relevantes.")
+
+
+with st.expander("🔍 Ver inconsistências detalhadas"):
+    st.markdown("### Duplicidades prováveis")
+    st.dataframe(
+        auditoria.get("duplicidades", pd.DataFrame()),
+        use_container_width=True
+    )
+
+    st.markdown("### Sexo incompatível")
+    st.dataframe(
+        auditoria.get("sexo_incompativel", pd.DataFrame()),
+        use_container_width=True
+    )
+
+    st.markdown("### Idade incompatível")
+    st.dataframe(
+        auditoria.get("idade_incompativel", pd.DataFrame()),
+        use_container_width=True
+    )
+
+    st.markdown("### CID incompatível")
+    st.dataframe(
+        auditoria.get("cid_incompativel", pd.DataFrame()),
+        use_container_width=True
+    )
+
+    st.markdown("### Município de notificação diferente do município de residência")
+    st.dataframe(
+        auditoria.get("municipio_divergente", pd.DataFrame()),
+        use_container_width=True
+    )
+
+
+st.markdown("---")
+st.markdown("## 🚀 Acessar painel específico")
+
+if agravo_confirmado == "Acidente de Trabalho Grave":
+
+    if st.button("👷 Abrir Painel Analítico — Acidente de Trabalho Grave", use_container_width=True):
+        st.session_state["abrir_painel_acidente_trabalho"] = True
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
+
+    if st.button("🛡️ Abrir Painel Analítico — Violência Interpessoal/Autoprovocada", use_container_width=True):
+        st.session_state["abrir_painel_violencia"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Dengue/Chikungunya":
+
+    if st.button("🦟 Abrir Painel Analítico — Arboviroses", use_container_width=True):
+        st.session_state["abrir_painel_arbovirose"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Intoxicação Exógena":
+
+    if st.button("☣️ Abrir Painel Analítico — Intoxicação Exógena", use_container_width=True):
+        st.session_state["abrir_painel_intoxicacao"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Leptospirose":
+
+    if st.button("🐀 Abrir Painel Analítico — Leptospirose", use_container_width=True):
+        st.session_state["abrir_painel_leptospirose"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Toxoplasmose":
+
+    if st.button("🧬 Abrir Painel Analítico — Toxoplasmose", use_container_width=True):
+        st.session_state["abrir_painel_toxoplasmose"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+
+else:
+
+    st.info("Este agravo já foi reconhecido, mas o painel específico ainda será criado.")
 
 
 st.markdown("---")
 
-col_a, col_b = st.columns([2, 1])
+with st.expander("🧱 Estrutura do DBF"):
+    try:
+        st.dataframe(
+            resumo_dbf(df),
+            use_container_width=True,
+            height=500
+        )
 
-with col_a:
-    st.success("Para começar, acesse **Leitor DBF** no menu lateral.")
+    except Exception:
+        estrutura = pd.DataFrame({
+            "Campo": df.columns,
+            "Tipo": [str(df[c].dtype) for c in df.columns],
+            "Valores preenchidos": [
+                int(df[c].notna().sum())
+                for c in df.columns
+            ],
+            "Percentual preenchido": [
+                round((df[c].notna().sum() / len(df)) * 100, 1)
+                if len(df) > 0 else 0
+                for c in df.columns
+            ]
+        })
 
-with col_b:
-    if st.button("🚪 Sair do sistema", use_container_width=True):
-        fazer_logout()
-        st.rerun()
+        st.dataframe(
+            estrutura,
+            use_container_width=True,
+            height=500
+        )
 
 
-st.caption("MB Technological Solutions® • MB Health Intelligence • Inteligência Epidemiológica Aplicada ao SUS")
+st.markdown("---")
+
+st.download_button(
+    "📥 Baixar dados decodificados em CSV",
+    data=df_publico.to_csv(index=False).encode("utf-8"),
+    file_name="dados_decodificados.csv",
+    mime="text/csv"
+)
+
+
+if st.session_state.get("abrir_painel_acidente_trabalho", False):
+    st.markdown("---")
+    render_painel_acidente_trabalho(df)
+
+if st.session_state.get("abrir_painel_violencia", False):
+    st.markdown("---")
+    render_painel_violencia(df)
+
+if st.session_state.get("abrir_painel_arbovirose", False):
+    st.markdown("---")
+    render_painel_arbovirose(df)
+
+if st.session_state.get("abrir_painel_intoxicacao", False):
+    st.markdown("---")
+    render_painel_intoxicacao_exogena(df)
+
+if st.session_state.get("abrir_painel_leptospirose", False):
+    st.markdown("---")
+    render_painel_leptospirose(df)
+
+if st.session_state.get("abrir_painel_toxoplasmose", False):
+    st.markdown("---")
+    render_painel_toxoplasmose(df)
+
+
+st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 11")
