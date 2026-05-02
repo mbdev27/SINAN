@@ -101,7 +101,9 @@ def detectar_duplicidades(df):
         "NM_PACIENT",
         "NM_MAE_PAC",
         "DT_OCOR",
-        "DT_SIN_PRI"
+        "DT_SIN_PRI",
+        "DT_ACID",
+        "DT_NOTIFIC"
     ]:
         if c in df.columns:
             colunas.append(c)
@@ -128,7 +130,17 @@ def detectar_sexo_incompativel(df):
     if "CS_SEXO" not in df.columns:
         return pd.DataFrame()
 
-    if "GESTANTE" not in df.columns:
+    coluna_gestante = None
+
+    for candidato in [
+        "GESTANTE",
+        "CS_GESTANT"
+    ]:
+        if candidato in df.columns:
+            coluna_gestante = candidato
+            break
+
+    if coluna_gestante is None:
         return pd.DataFrame()
 
     sexo = (
@@ -139,7 +151,7 @@ def detectar_sexo_incompativel(df):
     )
 
     gest = (
-        df["GESTANTE"]
+        df[coluna_gestante]
         .astype(str)
         .str.strip()
     )
@@ -199,7 +211,8 @@ def detectar_cid_incompativel(df):
         "CID10",
         "NU_CID10",
         "CID",
-        "CID_PRINC"
+        "CID_PRINC",
+        "ID_AGRAVO"
     ]:
         if c in df.columns:
             coluna_cid = c
@@ -215,13 +228,21 @@ def detectar_cid_incompativel(df):
         .str.strip()
     )
 
+    vazios = cid.isin([
+        "",
+        "NAN",
+        "NONE",
+        "NULL",
+        "IGNORADO"
+    ])
+
     inconsistentes = df[
+        (~vazios)
+        &
         (
-            cid.str.len() < 3
-        )
-        |
-        (
-            ~cid.str.match(r"^[A-Z][0-9]")
+            (cid.str.len() < 3)
+            |
+            (~cid.str.match(r"^[A-Z][0-9]"))
         )
     ]
 
@@ -238,34 +259,44 @@ def detectar_municipio_divergente(df):
     col_res = None
 
     for c in [
-        "ID_MN_RESI",
-        "ID_MUNICIP"
-    ]:
-        if c in df.columns:
-            col_res = c
-            break
-
-    for c in [
+        "ID_MUNICIP",
         "ID_MUNICIP_NOT",
-        "ID_MUNICIP"
+        "ID_MN_NOTI"
     ]:
         if c in df.columns:
             col_not = c
             break
 
+    for c in [
+        "ID_MN_RESI",
+        "ID_MUNICIP_RES",
+        "MUNICIPIO_RESIDENCIA"
+    ]:
+        if c in df.columns:
+            col_res = c
+            break
+
     if not col_not or not col_res:
         return pd.DataFrame()
 
+    noti = (
+        df[col_not]
+        .astype(str)
+        .str.strip()
+    )
+
+    resi = (
+        df[col_res]
+        .astype(str)
+        .str.strip()
+    )
+
     divergentes = df[
-        (
-            df[col_not]
-            .astype(str)
-            .str.strip()
-            !=
-            df[col_res]
-            .astype(str)
-            .str.strip()
-        )
+        (noti != "")
+        &
+        (resi != "")
+        &
+        (noti != resi)
     ]
 
     return divergentes.reset_index(drop=True)
@@ -361,6 +392,8 @@ def inferir_agravo(df, nome_arquivo=""):
         for c in df.columns
     ]
 
+    nome_arquivo = str(nome_arquivo).upper()
+
     ranking = []
 
     # --------------------------------------------------------
@@ -385,6 +418,10 @@ def inferir_agravo(df, nome_arquivo=""):
         if any(termo in c for c in colunas):
             score_acidente += 1
             encontrados_acidente.append(termo)
+
+    if "ACIDENTE" in nome_arquivo or "ACID" in nome_arquivo:
+        score_acidente += 2
+        encontrados_acidente.append("NOME_ARQUIVO")
 
     ranking.append({
         "Agravo": "Acidente de Trabalho Grave",
@@ -417,11 +454,61 @@ def inferir_agravo(df, nome_arquivo=""):
             score_violencia += 1
             encontrados_violencia.append(termo)
 
+    if "VIOL" in nome_arquivo:
+        score_violencia += 2
+        encontrados_violencia.append("NOME_ARQUIVO")
+
     ranking.append({
         "Agravo": "Violência Interpessoal/Autoprovocada",
         "Score": score_violencia,
         "Colunas identificadas": ", ".join(
             encontrados_violencia
+        )
+    })
+
+    # --------------------------------------------------------
+    # DENGUE / CHIKUNGUNYA
+    # --------------------------------------------------------
+
+    score_arbovirose = 0
+
+    termos_arbovirose = [
+        "FEBRE",
+        "MIALGIA",
+        "CEFALEIA",
+        "EXANTEMA",
+        "SOROTIPO",
+        "CLASSI_FIN",
+        "CRITERIO",
+        "ALRM",
+        "GRAV",
+        "RESUL_NS1",
+        "RESUL_SORO",
+        "DENGUE",
+        "CHIK"
+    ]
+
+    encontrados_arbovirose = []
+
+    for termo in termos_arbovirose:
+
+        if any(termo in c for c in colunas):
+            score_arbovirose += 1
+            encontrados_arbovirose.append(termo)
+
+    if (
+        "DENG" in nome_arquivo
+        or "CHIK" in nome_arquivo
+        or "ARBOV" in nome_arquivo
+    ):
+        score_arbovirose += 3
+        encontrados_arbovirose.append("NOME_ARQUIVO")
+
+    ranking.append({
+        "Agravo": "Dengue/Chikungunya",
+        "Score": score_arbovirose,
+        "Colunas identificadas": ", ".join(
+            encontrados_arbovirose
         )
     })
 
