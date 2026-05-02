@@ -7,12 +7,7 @@ from utils.cnes import (
 )
 
 
-# ============================================================
-# CLASSIFICAÇÃO DA QUALIDADE
-# ============================================================
-
 def classificar_qualidade(score):
-
     try:
         score = float(score)
     except Exception:
@@ -30,12 +25,7 @@ def classificar_qualidade(score):
     return "🔴 Ruim"
 
 
-# ============================================================
-# SCORE GLOBAL DO BANCO
-# ============================================================
-
 def calcular_score_banco(df):
-
     if df.empty:
         return 0
 
@@ -57,16 +47,10 @@ def calcular_score_banco(df):
     return round(score, 1)
 
 
-# ============================================================
-# COLUNAS MAIS VAZIAS
-# ============================================================
-
 def detectar_colunas_vazias(df):
-
     resultado = []
 
     for coluna in df.columns:
-
         preenchimento = (
             df[coluna]
             .replace("", np.nan)
@@ -82,19 +66,12 @@ def detectar_colunas_vazias(df):
 
     resultado = pd.DataFrame(resultado)
 
-    resultado = resultado.sort_values(
-        "Preenchimento (%)"
-    )
+    resultado = resultado.sort_values("Preenchimento (%)")
 
     return resultado.reset_index(drop=True)
 
 
-# ============================================================
-# DUPLICIDADES
-# ============================================================
-
 def detectar_duplicidades(df):
-
     colunas = []
 
     for c in [
@@ -121,12 +98,7 @@ def detectar_duplicidades(df):
     return duplicados.reset_index(drop=True)
 
 
-# ============================================================
-# SEXO INCOMPATÍVEL
-# ============================================================
-
 def detectar_sexo_incompativel(df):
-
     if "CS_SEXO" not in df.columns:
         return pd.DataFrame()
 
@@ -165,12 +137,7 @@ def detectar_sexo_incompativel(df):
     return inconsistentes.reset_index(drop=True)
 
 
-# ============================================================
-# IDADE INCOMPATÍVEL
-# ============================================================
-
 def detectar_idade_incompativel(df):
-
     coluna_idade = None
 
     for c in [
@@ -199,12 +166,7 @@ def detectar_idade_incompativel(df):
     return inconsistentes.reset_index(drop=True)
 
 
-# ============================================================
-# CID INCOMPATÍVEL
-# ============================================================
-
 def detectar_cid_incompativel(df):
-
     coluna_cid = None
 
     for c in [
@@ -249,12 +211,7 @@ def detectar_cid_incompativel(df):
     return inconsistentes.reset_index(drop=True)
 
 
-# ============================================================
-# MUNICÍPIO DIVERGENTE
-# ============================================================
-
 def detectar_municipio_divergente(df):
-
     col_not = None
     col_res = None
 
@@ -302,12 +259,7 @@ def detectar_municipio_divergente(df):
     return divergentes.reset_index(drop=True)
 
 
-# ============================================================
-# INCOMPLETUDE POR UNIDADE
-# ============================================================
-
 def calcular_incompletude_por_unidade(df):
-
     col_unidade = None
 
     for candidato in [
@@ -322,7 +274,6 @@ def calcular_incompletude_por_unidade(df):
             break
 
     if not col_unidade:
-
         return pd.DataFrame(columns=[
             "CNES",
             "Nome da unidade",
@@ -336,20 +287,14 @@ def calcular_incompletude_por_unidade(df):
     resultado = []
 
     for unidade, grupo in df.groupby(col_unidade):
-
         unidade_codigo = "".join(
             c for c in str(unidade).replace(".0", "")
             if c.isdigit()
         )
 
         if cnes_base.empty:
-
-            nome_unidade = (
-                "Base CNES não localizada ou inválida"
-            )
-
+            nome_unidade = "Base CNES não localizada ou inválida"
         else:
-
             nome_unidade = localizar_nome_por_cnes(
                 unidade_codigo,
                 cnes_base
@@ -358,18 +303,11 @@ def calcular_incompletude_por_unidade(df):
         preenchimento = calcular_score_banco(grupo)
 
         resultado.append({
-
             "CNES": unidade_codigo,
-
             "Nome da unidade": nome_unidade,
-
             "Registros": len(grupo),
-
             "Preenchimento (%)": preenchimento,
-
-            "Classificação": classificar_qualidade(
-                preenchimento
-            )
+            "Classificação": classificar_qualidade(preenchimento)
         })
 
     resultado = pd.DataFrame(resultado)
@@ -381,12 +319,7 @@ def calcular_incompletude_por_unidade(df):
     )
 
 
-# ============================================================
-# INFERIR AGRAVO
-# ============================================================
-
 def inferir_agravo(df, nome_arquivo=""):
-
     colunas = [
         str(c).upper()
         for c in df.columns
@@ -396,12 +329,7 @@ def inferir_agravo(df, nome_arquivo=""):
 
     ranking = []
 
-    # --------------------------------------------------------
-    # ACIDENTE DE TRABALHO GRAVE
-    # --------------------------------------------------------
-
     score_acidente = 0
-
     termos_acidente = [
         "CID",
         "ACID",
@@ -410,11 +338,9 @@ def inferir_agravo(df, nome_arquivo=""):
         "CAT",
         "TRAB"
     ]
-
     encontrados_acidente = []
 
     for termo in termos_acidente:
-
         if any(termo in c for c in colunas):
             score_acidente += 1
             encontrados_acidente.append(termo)
@@ -426,17 +352,10 @@ def inferir_agravo(df, nome_arquivo=""):
     ranking.append({
         "Agravo": "Acidente de Trabalho Grave",
         "Score": score_acidente,
-        "Colunas identificadas": ", ".join(
-            encontrados_acidente
-        )
+        "Colunas identificadas": ", ".join(encontrados_acidente)
     })
 
-    # --------------------------------------------------------
-    # VIOLÊNCIA
-    # --------------------------------------------------------
-
     score_violencia = 0
-
     termos_violencia = [
         "VIOL",
         "AGRESS",
@@ -445,11 +364,9 @@ def inferir_agravo(df, nome_arquivo=""):
         "LES_AUTOP",
         "REL_TRAB"
     ]
-
     encontrados_violencia = []
 
     for termo in termos_violencia:
-
         if any(termo in c for c in colunas):
             score_violencia += 1
             encontrados_violencia.append(termo)
@@ -461,17 +378,10 @@ def inferir_agravo(df, nome_arquivo=""):
     ranking.append({
         "Agravo": "Violência Interpessoal/Autoprovocada",
         "Score": score_violencia,
-        "Colunas identificadas": ", ".join(
-            encontrados_violencia
-        )
+        "Colunas identificadas": ", ".join(encontrados_violencia)
     })
 
-    # --------------------------------------------------------
-    # DENGUE / CHIKUNGUNYA
-    # --------------------------------------------------------
-
     score_arbovirose = 0
-
     termos_arbovirose = [
         "FEBRE",
         "MIALGIA",
@@ -487,11 +397,9 @@ def inferir_agravo(df, nome_arquivo=""):
         "DENGUE",
         "CHIK"
     ]
-
     encontrados_arbovirose = []
 
     for termo in termos_arbovirose:
-
         if any(termo in c for c in colunas):
             score_arbovirose += 1
             encontrados_arbovirose.append(termo)
@@ -507,9 +415,46 @@ def inferir_agravo(df, nome_arquivo=""):
     ranking.append({
         "Agravo": "Dengue/Chikungunya",
         "Score": score_arbovirose,
-        "Colunas identificadas": ", ".join(
-            encontrados_arbovirose
-        )
+        "Colunas identificadas": ", ".join(encontrados_arbovirose)
+    })
+
+    score_intoxicacao = 0
+    termos_intoxicacao = [
+        "TOX",
+        "INTOX",
+        "AGENTE",
+        "AGENT",
+        "EXPOS",
+        "EXPO",
+        "CIRCUNST",
+        "CLASSI_FIN",
+        "CRITERIO",
+        "HOSPITALIZ",
+        "DT_INTERNA",
+        "EVOLUCAO",
+        "TP_ATEND",
+        "GRUPO_AGEN"
+    ]
+    encontrados_intoxicacao = []
+
+    for termo in termos_intoxicacao:
+        if any(termo in c for c in colunas):
+            score_intoxicacao += 1
+            encontrados_intoxicacao.append(termo)
+
+    if (
+        "IEXOG" in nome_arquivo
+        or "INTOX" in nome_arquivo
+        or "EXOG" in nome_arquivo
+        or "TOX" in nome_arquivo
+    ):
+        score_intoxicacao += 4
+        encontrados_intoxicacao.append("NOME_ARQUIVO")
+
+    ranking.append({
+        "Agravo": "Intoxicação Exógena",
+        "Score": score_intoxicacao,
+        "Colunas identificadas": ", ".join(encontrados_intoxicacao)
     })
 
     ranking = sorted(
@@ -519,64 +464,39 @@ def inferir_agravo(df, nome_arquivo=""):
     )
 
     melhor = ranking[0]
-
     score = melhor["Score"]
 
     if score >= 5:
         confianca = "Alta"
-
     elif score >= 3:
         confianca = "Média"
-
     else:
         confianca = "Baixa"
 
     return {
-
         "agravo": melhor["Agravo"],
-
         "confianca": confianca,
-
         "score": score,
-
-        "ficha_sugerida": (
-            f"{melhor['Agravo']}.pdf"
-        ),
-
+        "ficha_sugerida": f"{melhor['Agravo']}.pdf",
         "motivo": (
             f"Foram encontradas colunas compatíveis: "
             f"{melhor['Colunas identificadas']}"
         ),
-
         "ranking": ranking
     }
 
 
-# ============================================================
-# AUDITORIA GERAL
-# ============================================================
-
 def gerar_auditoria_sinan(df, agravo=None):
-
     score = calcular_score_banco(df)
 
     return {
-
         "score_banco": score,
-
         "qualidade_banco": classificar_qualidade(score),
-
         "colunas_vazias": detectar_colunas_vazias(df),
-
         "duplicidades": detectar_duplicidades(df),
-
         "sexo_incompativel": detectar_sexo_incompativel(df),
-
         "idade_incompativel": detectar_idade_incompativel(df),
-
         "cid_incompativel": detectar_cid_incompativel(df),
-
         "municipio_divergente": detectar_municipio_divergente(df),
-
         "incompletude_unidade": calcular_incompletude_por_unidade(df),
     }
