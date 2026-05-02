@@ -6,7 +6,7 @@ from utils.auth import exigir_login, fazer_logout, obter_usuario_atual
 
 st.set_page_config(
     page_title="Página Inicial",
-    page_icon="🏠",
+    page_icon="🌅",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -29,235 +29,161 @@ if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
 
 
 st.markdown("""
-<div class="mb-header">
-    <h1>🏠 MB Health Intelligence</h1>
+<div class="hz-hero">
+    <span class="hz-kicker">Beta 1 • Horizonte Health Intelligence</span>
+    <h1>Dados públicos, visão clara, decisões melhores.</h1>
     <p>
-        Inteligência epidemiológica aplicada ao SUS.
-        Uma plataforma da MB Technological Solutions®.
+        Uma plataforma GovTech para leitura inteligente de bancos SINAN,
+        auditoria epidemiológica e painéis analíticos por agravo.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-
-st.markdown("## Transformando bancos SINAN em inteligência para decisão")
+st.markdown("## O projeto")
 
 st.markdown("""
-A **MB Health Intelligence** é uma plataforma desenvolvida para apoiar a Vigilância em Saúde
-na leitura, auditoria, qualificação e análise de bancos epidemiológicos do SINAN.
+A **Horizonte Health Intelligence** nasce para resolver uma dor antiga da Vigilância em Saúde:
+transformar bancos DBF, fichas de notificação e dados codificados em informação útil para
+gestores, técnicos e equipes de campo.
 
-O projeto nasce de uma dor real dos serviços públicos de saúde: muitos municípios possuem
-grande volume de dados, mas enfrentam dificuldades para transformar bancos DBF, fichas de
-notificação e registros codificados em informação útil para gestão, planejamento e resposta
-oportuna.
+A ferramenta lê bancos do SINAN, identifica o agravo provável, cruza a estrutura dos dados
+com a lógica das fichas de notificação e apresenta uma camada analítica limpa, responsiva
+e auditável.
 
-A proposta da **MB Technological Solutions®** é criar uma ponte entre tecnologia, vigilância
-epidemiológica e gestão pública. Não se trata apenas de visualizar dados, mas de qualificar
-a informação, revelar inconsistências e apoiar decisões com evidências.
+O usuário final deve sentir que está usando uma plataforma pública moderna: segura,
+organizada, bonita e confiável.
 """)
 
-
-st.markdown("## 🧠 O que a ferramenta faz")
+st.markdown("## O que a plataforma faz")
 
 c1, c2, c3 = st.columns(3)
 
 with c1:
     st.markdown("""
-    <div class="mb-card">
+    <div class="hz-card">
         <h3>📂 Lê bancos DBF</h3>
         <p>
-            Permite o upload de arquivos DBF do SINAN e realiza a leitura estruturada
-            dos dados, mesmo quando os bancos possuem campos codificados.
+            Recebe arquivos DBF do SINAN, identifica estrutura, colunas,
+            volume de registros e prepara os dados para análise.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with c2:
     st.markdown("""
-    <div class="mb-card">
-        <h3>🔎 Reconhece o agravo</h3>
+    <div class="hz-card">
+        <h3>🧠 Reconhece agravos</h3>
         <p>
-            Analisa automaticamente o banco enviado e sugere o agravo correspondente,
-            permitindo ao usuário confirmar ou alterar manualmente.
+            Sugere automaticamente o agravo correspondente ao banco enviado,
+            permitindo validação e ajuste manual pelo usuário.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with c3:
     st.markdown("""
-    <div class="mb-card">
-        <h3>🧪 Audita a qualidade</h3>
+    <div class="hz-card">
+        <h3>🧪 Audita dados</h3>
         <p>
-            Calcula score do banco, identifica colunas vazias, duplicidades prováveis,
-            inconsistências e preenchimento das fichas de notificação.
+            Avalia completude, duplicidades, inconsistências, campos vazios,
+            CID incompatível e qualidade do preenchimento.
         </p>
     </div>
     """, unsafe_allow_html=True)
-
 
 c4, c5, c6 = st.columns(3)
 
 with c4:
     st.markdown("""
-    <div class="mb-card">
-        <h3>📊 Gera painéis</h3>
+    <div class="hz-card">
+        <h3>📊 Cria painéis</h3>
         <p>
-            Apresenta dashboards interativos por agravo, com indicadores,
-            filtros, gráficos e tabelas decodificadas.
+            Gera painéis por agravo, com KPIs, gráficos, filtros,
+            séries temporais e tabelas decodificadas.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with c5:
     st.markdown("""
-    <div class="mb-card">
-        <h3>🧾 Qualifica fichas</h3>
+    <div class="hz-card">
+        <h3>🧾 Mede qualidade</h3>
         <p>
-            Mede o percentual de preenchimento por notificação e sinaliza fichas ruins,
-            medianas ou boas, além de campos obrigatórios ausentes.
+            Calcula o percentual de preenchimento por ficha e sinaliza
+            registros ruins, medianos e bons.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 with c6:
     st.markdown("""
-    <div class="mb-card">
-        <h3>📥 Exporta dados</h3>
+    <div class="hz-card">
+        <h3>📥 Exporta informação</h3>
         <p>
-            Permite baixar dados decodificados e filtrados em CSV, apoiando relatórios,
-            análises complementares e prestação de contas.
+            Permite baixar dados decodificados para relatórios,
+            reuniões técnicas e análises complementares.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-
-st.markdown("## 🚀 Como usar a plataforma")
+st.markdown("## Como usar")
 
 st.markdown("""
-1. No menu lateral, acesse **Leitor DBF**.
-2. Envie o arquivo DBF do SINAN.
-3. Aguarde a leitura inteligente do banco.
-4. Confira o agravo identificado automaticamente.
-5. Ajuste o agravo manualmente, se necessário.
-6. Consulte a auditoria de qualidade do banco.
-7. Abra o painel analítico específico.
-8. Use os filtros, gráficos e tabelas para análise.
-9. Exporte os dados decodificados quando precisar.
+1. Entre no sistema com seu usuário e senha.
+2. Acesse **Leitor DBF**.
+3. Envie o banco DBF do SINAN.
+4. Confira a leitura inteligente.
+5. Confirme o agravo identificado.
+6. Analise a auditoria de qualidade.
+7. Abra o painel específico.
+8. Explore gráficos, filtros e tabelas.
+9. Exporte os dados quando necessário.
 """)
 
-
-st.markdown("## 🧩 Módulos analíticos")
-
-m1, m2, m3 = st.columns(3)
-
-with m1:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>👷 Saúde do Trabalhador</h4>
-        <p>
-            Análise de acidentes de trabalho graves, exposição ocupacional,
-            evolução, CAT, ocupação e qualidade das notificações.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m2:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🛡️ Violência Interpessoal/Autoprovocada</h4>
-        <p>
-            Perfil das vítimas, tipos de violência, meios de agressão,
-            provável autor, encaminhamentos e recorrência.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m3:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🦟 Arboviroses</h4>
-        <p>
-            Dengue e Chikungunya, classificação final, sinais clínicos,
-            sinais de alarme, dengue grave e exames laboratoriais.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-m4, m5, m6 = st.columns(3)
-
-with m4:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>☣️ Intoxicação Exógena</h4>
-        <p>
-            Grupo do agente tóxico, local, circunstância, via de exposição,
-            hospitalização, relação com trabalho e evolução.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m5:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🐀 Leptospirose</h4>
-        <p>
-            Situações de risco, sinais clínicos, hospitalização,
-            classificação, critério de confirmação e evolução do caso.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m6:
-    st.markdown("""
-    <div class="mb-card">
-        <h4>🧬 Toxoplasmose</h4>
-        <p>
-            Toxoplasmose adquirida, gestacional e congênita,
-            com análise de classificação, critério, evolução e perfil.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-st.markdown("## 💼 Sobre a MB Technological Solutions®")
+st.markdown("## Módulos disponíveis na Beta 1")
 
 st.markdown("""
-A **MB Technological Solutions®** nasce com a missão de desenvolver soluções digitais
-para problemas reais da gestão pública, especialmente no campo da saúde coletiva,
-vigilância em saúde e inteligência de dados.
+<span class="hz-badge">👷 Acidente de Trabalho Grave</span>
+<span class="hz-badge">🛡️ Violência</span>
+<span class="hz-badge">🦟 Dengue/Chikungunya</span>
+<span class="hz-badge">☣️ Intoxicação Exógena</span>
+<span class="hz-badge">🐀 Leptospirose</span>
+<span class="hz-badge">🧬 Toxoplasmose</span>
+""", unsafe_allow_html=True)
 
-A empresa combina conhecimento técnico-sanitário, desenvolvimento tecnológico e visão
-estratégica para criar ferramentas capazes de reduzir trabalho manual, qualificar
-processos e apoiar decisões baseadas em evidências.
-
-A visão é evoluir a plataforma para um produto SaaS de inteligência epidemiológica,
-com múltiplos agravos, login por município, banco histórico, relatórios automáticos,
-alertas, integração com inteligência artificial e suporte à gestão regional e estadual.
-""")
-
-
-st.markdown("## 🌎 Visão de futuro")
+st.markdown("## Sobre a Horizonte")
 
 st.markdown("""
-A plataforma foi construída para crescer de forma modular. Cada novo agravo incorporado
-aumenta a capacidade analítica do sistema e amplia seu valor para municípios, regionais,
-estados, instituições de pesquisa e equipes técnicas.
+A **Horizonte** é uma GovTech brasileira criada para desenvolver soluções digitais
+que aproximam tecnologia, gestão pública e sociedade.
 
-O objetivo é criar uma camada moderna de inteligência sobre sistemas legados do SUS,
-transformando bancos brutos em informação viva: clara, visual, auditável e acionável.
+A empresa atua na intersecção entre design institucional, ciência de dados,
+automação de processos e saúde pública. Seu compromisso é criar produtos que
+simplificam rotinas, fortalecem equipes e entregam clareza para gestores.
+
+A Horizonte não vende apenas sistemas. Ela entrega visão, confiança e capacidade
+de decisão.
 """)
 
+st.markdown("""
+<div class="hz-panel-dark">
+    <h2>Visão de futuro</h2>
+    <p>
+        Esta versão beta é o primeiro passo para uma plataforma SaaS de inteligência pública,
+        com múltiplos municípios, múltiplos agravos, banco histórico, alertas automáticos,
+        relatórios técnicos e integração com inteligência artificial.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown("---")
+col1, col2 = st.columns([2, 1])
 
-col_a, col_b = st.columns([2, 1])
-
-with col_a:
+with col1:
     st.success("Para começar, acesse **Leitor DBF** no menu lateral.")
 
-with col_b:
+with col2:
     if st.button("🚪 Sair do sistema", use_container_width=True):
         fazer_logout()
         st.rerun()
 
-
-st.caption("MB Technological Solutions® • MB Health Intelligence • Inteligência Epidemiológica Aplicada ao SUS")
+st.caption("Horizonte • Health Intelligence • GovTech Beta 1")
