@@ -1,12 +1,7 @@
 import pandas as pd
 
 
-# ============================================================
-# CAMPOS AVALIADOS POR AGRAVO
-# ============================================================
-
 CAMPOS_AVALIADOS_POR_AGRAVO = {
-
     "Acidente de Trabalho Grave": [
         "NU_NOTIFIC",
         "DT_NOTIFIC",
@@ -39,39 +34,6 @@ CAMPOS_AVALIADOS_POR_AGRAVO = {
         "DS_OBS",
     ],
 
-    "Acidente de Trabalho com Exposição a Material Biológico": [
-        "NU_NOTIFIC",
-        "DT_NOTIFIC",
-        "ID_MUNICIP",
-        "ID_UNIDADE",
-        "DT_ACID",
-        "NM_PACIENT",
-        "DT_NASC",
-        "NU_IDADE_N",
-        "CS_SEXO",
-        "CS_GESTANT",
-        "CS_RACA",
-        "CS_ESCOL_N",
-        "NM_MAE_PAC",
-        "ID_MN_RESI",
-        "NM_BAIRRO",
-        "NM_LOGRADO",
-        "ID_OCUPA_N",
-        "SIT_TRAB",
-        "MATERIAL",
-        "TP_EXPOS",
-        "CIRC_ACID",
-        "AGENTE",
-        "FONTE",
-        "EPI_LUVA",
-        "EPI_MASC",
-        "EPI_OCULOS",
-        "EPI_AVENTAL",
-        "VAC_HEP_B",
-        "EVOLUCAO",
-        "CAT",
-    ],
-
     "Violência Interpessoal/Autoprovocada": [
         "NU_NOTIFIC",
         "DT_NOTIFIC",
@@ -91,32 +53,15 @@ CAMPOS_AVALIADOS_POR_AGRAVO = {
         "NM_BAIRRO",
         "NM_LOGRADO",
         "ID_OCUPA_N",
-        "SIT_CONJUG",
-        "ORIENT_SEX",
-        "IDENT_GEN",
         "LOCAL_OCOR",
         "OUT_VEZES",
         "LES_AUTOP",
         "VIOL_FISIC",
         "VIOL_PSICO",
-        "VIOL_TORT",
         "VIOL_SEXU",
-        "VIOL_TRAF",
-        "VIOL_FINAN",
-        "VIOL_NEGLI",
-        "VIOL_INFAN",
-        "VIOL_LEGAL",
-        "AG_FORCA",
-        "AG_ENFOR",
-        "AG_OBJETO",
-        "AG_CORTE",
-        "AG_FOGO",
-        "AG_AMEACA",
         "NUM_ENVOLV",
         "AUTOR_SEXO",
-        "AUTOR_ALCO",
         "REL_TRAB",
-        "REL_CAT",
         "DT_ENCERRA",
     ],
 
@@ -146,25 +91,42 @@ CAMPOS_AVALIADOS_POR_AGRAVO = {
         "VOMITO",
         "NAUSEA",
         "DOR_COSTAS",
-        "CONJUNTVIT",
-        "ARTRITE",
-        "ARTRALGIA",
-        "PETEQUIA_N",
-        "LEUCOPENIA",
-        "LACO",
-        "DOR_RETRO",
-        "DIABETES",
-        "HEMATOLOG",
-        "HEPATOPAT",
-        "RENAL",
-        "HIPERTENSA",
-        "ACIDO_PEPT",
-        "AUTO_IMUNE",
-        "RESUL_SORO",
-        "RESUL_NS1",
-        "RESUL_PCR_",
-        "SOROTIPO",
+        "CLASSI_FIN",
+        "CRITERIO",
+        "EVOLUCAO",
+        "DT_ENCERRA",
+    ],
+
+    "Intoxicação Exógena": [
+        "NU_NOTIFIC",
+        "DT_NOTIFIC",
+        "ID_AGRAVO",
+        "ID_MUNICIP",
+        "ID_UNIDADE",
+        "DT_SIN_PRI",
+        "NM_PACIENT",
+        "DT_NASC",
+        "NU_IDADE_N",
+        "CS_SEXO",
+        "CS_GESTANT",
+        "CS_RACA",
+        "CS_ESCOL_N",
+        "NM_MAE_PAC",
+        "ID_MN_RESI",
+        "NM_BAIRRO",
+        "ID_OCUPA_N",
+        "SIT_TRAB",
+        "LOCAL_EXPO",
+        "GRUPO_AGEN",
+        "AGENTE_TOX",
+        "VIA_1",
+        "VIA_EXPO",
+        "CIRCUNST",
+        "TIPO_EXP",
+        "TP_ATEND",
         "HOSPITALIZ",
+        "REL_TRAB",
+        "CAT",
         "CLASSI_FIN",
         "CRITERIO",
         "EVOLUCAO",
@@ -173,12 +135,7 @@ CAMPOS_AVALIADOS_POR_AGRAVO = {
 }
 
 
-# ============================================================
-# CAMPOS OBRIGATÓRIOS POR AGRAVO
-# ============================================================
-
 CAMPOS_OBRIGATORIOS_POR_AGRAVO = {
-
     "Acidente de Trabalho Grave": [
         "NU_NOTIFIC",
         "DT_NOTIFIC",
@@ -194,27 +151,6 @@ CAMPOS_OBRIGATORIOS_POR_AGRAVO = {
         "SIT_TRAB",
         "LOCAL_ACID",
         "TIPO_ACID",
-        "EVOLUCAO",
-    ],
-
-    "Acidente de Trabalho com Exposição a Material Biológico": [
-        "NU_NOTIFIC",
-        "DT_NOTIFIC",
-        "ID_MUNICIP",
-        "ID_UNIDADE",
-        "DT_ACID",
-        "NM_PACIENT",
-        "DT_NASC",
-        "CS_SEXO",
-        "CS_RACA",
-        "CS_ESCOL_N",
-        "ID_OCUPA_N",
-        "SIT_TRAB",
-        "MATERIAL",
-        "TP_EXPOS",
-        "CIRC_ACID",
-        "AGENTE",
-        "FONTE",
         "EVOLUCAO",
     ],
 
@@ -254,15 +190,29 @@ CAMPOS_OBRIGATORIOS_POR_AGRAVO = {
         "CRITERIO",
         "EVOLUCAO",
     ],
+
+    "Intoxicação Exógena": [
+        "NU_NOTIFIC",
+        "DT_NOTIFIC",
+        "ID_AGRAVO",
+        "ID_MUNICIP",
+        "ID_UNIDADE",
+        "DT_SIN_PRI",
+        "NM_PACIENT",
+        "DT_NASC",
+        "CS_SEXO",
+        "CS_RACA",
+        "LOCAL_EXPO",
+        "GRUPO_AGEN",
+        "CIRCUNST",
+        "CLASSI_FIN",
+        "CRITERIO",
+        "EVOLUCAO",
+    ],
 }
 
 
-# ============================================================
-# FUNÇÕES AUXILIARES
-# ============================================================
-
 def campo_preenchido(valor):
-
     if pd.isna(valor):
         return False
 
@@ -286,7 +236,6 @@ def campo_preenchido(valor):
 
 
 def calcular_percentual_linha(row, campos_avaliados):
-
     campos_existentes = [
         campo for campo in campos_avaliados
         if campo in row.index
@@ -307,7 +256,6 @@ def calcular_percentual_linha(row, campos_avaliados):
 
 
 def classificar_qualidade(percentual):
-
     if percentual < 70:
         return "🚩 Ruim"
 
@@ -318,33 +266,22 @@ def classificar_qualidade(percentual):
 
 
 def verificar_obrigatorios_linha(row, campos_obrigatorios):
-
     faltantes = []
 
     for campo in campos_obrigatorios:
-
         if campo in row.index:
-
             if not campo_preenchido(row[campo]):
                 faltantes.append(campo)
-
         else:
-
             faltantes.append(campo)
 
     if faltantes:
-
         return "⚠️ Faltando: " + ", ".join(faltantes)
 
     return "✅ Obrigatórios preenchidos"
 
 
-# ============================================================
-# FUNÇÃO PRINCIPAL
-# ============================================================
-
 def adicionar_qualidade_ficha(df, agravo):
-
     df = df.copy()
 
     campos_avaliados = CAMPOS_AVALIADOS_POR_AGRAVO.get(
@@ -383,12 +320,10 @@ def adicionar_qualidade_ficha(df, agravo):
 
 
 def resumo_qualidade_ficha(df):
-
     if (
         df.empty
         or "PERCENTUAL_PREENCHIMENTO" not in df.columns
     ):
-
         return {
             "media": 0,
             "ruins": 0,
@@ -397,34 +332,24 @@ def resumo_qualidade_ficha(df):
             "alertas": 0,
         }
 
-    media = df[
-        "PERCENTUAL_PREENCHIMENTO"
-    ].mean()
+    media = df["PERCENTUAL_PREENCHIMENTO"].mean()
 
-    ruins = df[
-        "QUALIDADE_PREENCHIMENTO"
-    ].str.contains(
+    ruins = df["QUALIDADE_PREENCHIMENTO"].str.contains(
         "Ruim",
         na=False
     ).sum()
 
-    medianas = df[
-        "QUALIDADE_PREENCHIMENTO"
-    ].str.contains(
+    medianas = df["QUALIDADE_PREENCHIMENTO"].str.contains(
         "Mediana",
         na=False
     ).sum()
 
-    boas = df[
-        "QUALIDADE_PREENCHIMENTO"
-    ].str.contains(
+    boas = df["QUALIDADE_PREENCHIMENTO"].str.contains(
         "Boa",
         na=False
     ).sum()
 
-    alertas = df[
-        "ALERTA_OBRIGATORIOS"
-    ].str.contains(
+    alertas = df["ALERTA_OBRIGATORIOS"].str.contains(
         "Faltando",
         na=False
     ).sum()
@@ -439,7 +364,6 @@ def resumo_qualidade_ficha(df):
 
 
 def colocar_qualidade_no_inicio(df):
-
     colunas_prioritarias = [
         "PERCENTUAL_PREENCHIMENTO",
         "QUALIDADE_PREENCHIMENTO",
