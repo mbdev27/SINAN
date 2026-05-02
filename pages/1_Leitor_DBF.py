@@ -17,12 +17,6 @@ from utils.auditoria_sinan import (
     gerar_auditoria_sinan
 )
 
-from utils.qualidade_ficha import (
-    adicionar_qualidade_ficha,
-    colocar_qualidade_no_inicio,
-    resumo_qualidade_ficha,
-)
-
 from mappings.acidente_trabalho_grave import (
     aplicar_mapeamento,
     gerar_tabela_publica
@@ -33,6 +27,11 @@ from mappings.violencia import (
     gerar_tabela_publica_violencia
 )
 
+from mappings.arbovirose import (
+    aplicar_mapeamento_arbovirose,
+    gerar_tabela_publica_arbovirose
+)
+
 from config.agravos import AGRAVOS
 
 from modulos.painel_acidente_trabalho import (
@@ -41,6 +40,10 @@ from modulos.painel_acidente_trabalho import (
 
 from modulos.painel_violencia import (
     render_painel_violencia
+)
+
+from modulos.painel_arbovirose import (
+    render_painel_arbovirose
 )
 
 
@@ -168,6 +171,11 @@ elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
 
     df = aplicar_mapeamento_violencia(df)
     df_publico = gerar_tabela_publica_violencia(df)
+
+elif agravo_confirmado == "Dengue/Chikungunya":
+
+    df = aplicar_mapeamento_arbovirose(df)
+    df_publico = gerar_tabela_publica_arbovirose(df)
 
 else:
 
@@ -404,6 +412,10 @@ if agravo_confirmado == "Acidente de Trabalho Grave":
             "abrir_painel_violencia"
         ] = False
 
+        st.session_state[
+            "abrir_painel_arbovirose"
+        ] = False
+
 
 elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
 
@@ -418,6 +430,30 @@ elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
 
         st.session_state[
             "abrir_painel_acidente_trabalho"
+        ] = False
+
+        st.session_state[
+            "abrir_painel_arbovirose"
+        ] = False
+
+
+elif agravo_confirmado == "Dengue/Chikungunya":
+
+    if st.button(
+        "🦟 Abrir Painel Analítico — Arboviroses",
+        use_container_width=True
+    ):
+
+        st.session_state[
+            "abrir_painel_arbovirose"
+        ] = True
+
+        st.session_state[
+            "abrir_painel_acidente_trabalho"
+        ] = False
+
+        st.session_state[
+            "abrir_painel_violencia"
         ] = False
 
 
@@ -519,10 +555,20 @@ if st.session_state.get(
     render_painel_violencia(df)
 
 
+if st.session_state.get(
+    "abrir_painel_arbovirose",
+    False
+):
+
+    st.markdown("---")
+
+    render_painel_arbovirose(df)
+
+
 # ============================================================
 # RODAPÉ
 # ============================================================
 
 st.caption(
-    "SINAN Decoder • Leitor DBF Inteligente • Versão 7"
+    "SINAN Decoder • Leitor DBF Inteligente • Versão 8"
 )
