@@ -1,3 +1,6 @@
+from utils.auth import exigir_login
+exigir_login()
+
 import tempfile
 import streamlit as st
 import pandas as pd
