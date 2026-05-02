@@ -9,31 +9,53 @@ CORES = {
     "white": "#F8FAFC",
     "white_pure": "#FFFFFF",
     "text_dark": "#101820",
+    "text_light": "#F8FAFC",
     "muted": "#64748B",
     "border": "#D6DEE6",
     "danger": "#DC2626",
     "warning": "#F59E0B",
+    "success": "#00ED64",
 }
 
+
 PALETA = [
-    "#0A2647",
-    "#00ED64",
+    CORES["navy"],
+    CORES["emerald"],
     "#1D4ED8",
     "#14B8A6",
-    "#64748B",
+    "#F59E0B",
     "#DC2626",
 ]
 
 
 def aplicar_tema_streamlit(st):
+
     st.markdown(
         """
         <style>
+
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap');
 
+        :root {
+            --hz-navy: #0A2647;
+            --hz-emerald: #00ED64;
+            --hz-titanium: #E1E8ED;
+            --hz-midnight: #101820;
+            --hz-white: #F8FAFC;
+        }
+
         html, body, [data-testid="stAppViewContainer"] {
-            background: linear-gradient(135deg, #F8FAFC 0%, #E1E8ED 100%) !important;
-            color: #101820 !important;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #071827 0%,
+                    #0A2647 60%,
+                    #064E3B 100%
+                ) !important;
+
+            color: #F8FAFC !important;
+
             font-family: 'Inter', sans-serif !important;
         }
 
@@ -41,198 +63,438 @@ def aplicar_tema_streamlit(st):
             font-family: 'Inter', sans-serif !important;
         }
 
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Montserrat', sans-serif !important;
-            color: #101820 !important;
-            font-weight: 800 !important;
-        }
-
-        p, li, label, span, div {
-            color: #101820;
-        }
+        /* ======================================================
+           SIDEBAR
+        ====================================================== */
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #101820 0%, #0A2647 100%) !important;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #08131F 0%,
+                    #0A2647 100%
+                ) !important;
+
+            border-right:
+                1px solid rgba(255,255,255,0.08);
         }
 
         [data-testid="stSidebar"] * {
             color: #F8FAFC !important;
         }
 
-        [data-testid="stSidebar"] button {
-            background: #00ED64 !important;
-            color: #101820 !important;
-            border-radius: 12px !important;
-            border: 1px solid #00ED64 !important;
-            font-weight: 800 !important;
+        [data-testid="stSidebarNav"] {
+            padding-top: 1rem;
         }
+
+        [data-testid="stSidebarNav"] a {
+
+            border-radius: 12px !important;
+
+            margin-bottom: 4px;
+
+            transition:
+                all 0.15s ease-in-out;
+        }
+
+        [data-testid="stSidebarNav"] a:hover {
+
+            background:
+                rgba(255,255,255,0.08) !important;
+        }
+
+        /* remove tooltip estranho */
+
+        span[title="Keyboard_double_arrow_right"],
+        span[title="Keyboard_double_arrow_left"] {
+            display: none !important;
+        }
+
+        /* ======================================================
+           HERO
+        ====================================================== */
 
         .hz-hero,
         .mb-header {
-            background: linear-gradient(135deg, #101820 0%, #0A2647 72%, #064E3B 100%) !important;
-            padding: 36px;
-            border-radius: 22px;
-            margin-bottom: 28px;
-            box-shadow: 0px 20px 50px rgba(10, 38, 71, 0.25);
-            border: 1px solid rgba(255,255,255,0.12);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(7,24,39,0.98),
+                    rgba(10,38,71,0.98),
+                    rgba(6,78,59,0.94)
+                );
+
+            border:
+                1px solid rgba(255,255,255,0.08);
+
+            padding: 42px;
+
+            border-radius: 24px;
+
+            margin-bottom: 32px;
+
+            box-shadow:
+                0px 24px 60px rgba(0,0,0,0.35);
+        }
+
+        .hz-kicker {
+
+            color: #00ED64 !important;
+
+            font-weight: 800;
+
+            font-size: 0.78rem;
+
+            letter-spacing: 0.08em;
+
+            text-transform: uppercase;
         }
 
         .hz-hero h1,
         .mb-header h1 {
-            color: #F8FAFC !important;
-            font-size: clamp(2rem, 4vw, 4rem);
-            margin-bottom: 8px;
+
+            color: #FFFFFF !important;
+
+            font-size:
+                clamp(2.2rem, 4vw, 4.6rem);
+
+            line-height: 1.08;
+
+            margin-top: 10px;
+
+            margin-bottom: 18px;
+
+            font-family: 'Montserrat', sans-serif !important;
+
+            font-weight: 800 !important;
         }
 
         .hz-hero p,
         .mb-header p {
+
             color: #E1E8ED !important;
-            font-size: 1.08rem;
-            line-height: 1.65;
+
+            font-size: 1.1rem;
+
+            line-height: 1.7;
+
+            max-width: 1000px;
         }
 
-        .hz-kicker {
-            display: inline-block;
-            color: #00ED64 !important;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            font-size: 0.78rem;
+        /* ======================================================
+           TITULOS
+        ====================================================== */
+
+        h1, h2, h3, h4, h5, h6 {
+
+            color: #FFFFFF !important;
+
+            font-family: 'Montserrat', sans-serif !important;
+
+            font-weight: 800 !important;
+
+            letter-spacing: -0.02em;
         }
+
+        p, li, label, span, div {
+            color: #F8FAFC;
+        }
+
+        /* ======================================================
+           CARDS
+        ====================================================== */
 
         .hz-card,
         .mb-card {
-            background: #FFFFFF !important;
-            border: 1px solid #D6DEE6 !important;
-            border-left: 6px solid #00ED64 !important;
-            border-radius: 18px !important;
-            padding: 22px !important;
-            box-shadow: 0px 12px 35px rgba(10, 38, 71, 0.14) !important;
-            margin-bottom: 18px !important;
+
+            background:
+                rgba(8,19,31,0.72);
+
+            border:
+                1px solid rgba(255,255,255,0.08);
+
+            border-left:
+                6px solid #00ED64;
+
+            border-radius: 20px;
+
+            padding: 24px;
+
+            box-shadow:
+                0px 18px 40px rgba(0,0,0,0.24);
+
+            backdrop-filter: blur(12px);
+
+            margin-bottom: 18px;
+
+            height: 100%;
         }
 
         .hz-card h3,
         .hz-card h4,
         .mb-card h3,
         .mb-card h4 {
-            color: #0A2647 !important;
+
+            color: #FFFFFF !important;
         }
 
         .hz-card p,
         .mb-card p {
-            color: #101820 !important;
+
+            color: #E1E8ED !important;
+
+            line-height: 1.65;
         }
+
+        /* ======================================================
+           METRICAS
+        ====================================================== */
 
         div[data-testid="stMetric"] {
-            background: #FFFFFF !important;
-            border: 1px solid #D6DEE6 !important;
-            border-left: 6px solid #00ED64 !important;
-            border-radius: 18px !important;
+
+            background:
+                rgba(8,19,31,0.72) !important;
+
+            border:
+                1px solid rgba(255,255,255,0.08) !important;
+
+            border-left:
+                6px solid #00ED64 !important;
+
+            border-radius: 20px !important;
+
             padding: 18px !important;
-            box-shadow: 0px 10px 30px rgba(10, 38, 71, 0.14) !important;
-        }
 
-        div[data-testid="stMetric"] * {
-            color: #101820 !important;
-        }
+            min-height: 128px !important;
 
-        div[data-testid="stMetricValue"] {
-            color: #0A2647 !important;
-            font-family: 'Montserrat', sans-serif !important;
-            font-weight: 800 !important;
+            display: flex !important;
+
+            flex-direction: column !important;
+
+            justify-content: center !important;
+
+            box-shadow:
+                0px 18px 40px rgba(0,0,0,0.24) !important;
+
+            backdrop-filter: blur(10px);
+
+            overflow: hidden !important;
         }
 
         div[data-testid="stMetricLabel"] {
-            color: #64748B !important;
+
+            color: #E1E8ED !important;
+
             font-weight: 700 !important;
+
+            font-size:
+                clamp(0.72rem, 1vw, 0.95rem) !important;
+
+            overflow-wrap: anywhere !important;
         }
+
+        div[data-testid="stMetricValue"] {
+
+            color: #FFFFFF !important;
+
+            font-family:
+                'Montserrat', sans-serif !important;
+
+            font-weight: 800 !important;
+
+            font-size:
+                clamp(1.4rem, 2vw, 2.6rem) !important;
+
+            overflow-wrap: anywhere !important;
+        }
+
+        /* ======================================================
+           INPUTS
+        ====================================================== */
+
+        input,
+        textarea,
+        [data-baseweb="input"] > div,
+        [data-baseweb="select"] > div {
+
+            background:
+                rgba(255,255,255,0.96) !important;
+
+            color:
+                #101820 !important;
+
+            border:
+                1px solid rgba(255,255,255,0.12) !important;
+
+            border-radius:
+                14px !important;
+        }
+
+        input::placeholder {
+            color: #64748B !important;
+        }
+
+        label {
+            color: #FFFFFF !important;
+        }
+
+        /* ======================================================
+           FILE UPLOADER
+        ====================================================== */
+
+        [data-testid="stFileUploader"] {
+
+            background:
+                rgba(255,255,255,0.08) !important;
+
+            border:
+                2px dashed rgba(255,255,255,0.16) !important;
+
+            border-radius:
+                18px !important;
+
+            padding:
+                18px !important;
+        }
+
+        [data-testid="stFileUploader"] * {
+            color: #F8FAFC !important;
+        }
+
+        [data-testid="stFileUploaderDropzone"] {
+            background: transparent !important;
+        }
+
+        /* ======================================================
+           BOTÕES
+        ====================================================== */
 
         button,
         .stButton button,
         .stDownloadButton button {
-            background: #00ED64 !important;
-            color: #101820 !important;
-            border: 1px solid #00ED64 !important;
-            border-radius: 14px !important;
-            font-weight: 800 !important;
+
+            background:
+                #00ED64 !important;
+
+            color:
+                #101820 !important;
+
+            border:
+                1px solid #00ED64 !important;
+
+            border-radius:
+                14px !important;
+
+            font-weight:
+                800 !important;
+
+            transition:
+                all 0.18s ease-in-out;
+
+            min-height: 48px;
         }
 
         button:hover,
         .stButton button:hover,
         .stDownloadButton button:hover {
-            filter: brightness(1.05);
-            transform: translateY(-1px);
+
+            filter:
+                brightness(1.05);
+
+            transform:
+                translateY(-1px);
+
+            box-shadow:
+                0px 12px 30px rgba(0,237,100,0.26);
         }
 
-        input,
-        textarea,
-        [data-baseweb="select"] > div,
-        [data-baseweb="input"] > div {
-            background: #FFFFFF !important;
-            color: #101820 !important;
-            border-color: #D6DEE6 !important;
-            border-radius: 12px !important;
-        }
+        /* ======================================================
+           DATAFRAME
+        ====================================================== */
 
         [data-testid="stDataFrame"] {
-            background: #FFFFFF !important;
-            border-radius: 16px !important;
-            border: 1px solid #D6DEE6 !important;
-            overflow: hidden !important;
+
+            border-radius:
+                18px !important;
+
+            overflow:
+                hidden !important;
+
+            border:
+                1px solid rgba(255,255,255,0.08) !important;
         }
+
+        .stDataFrame * {
+            color: #101820 !important;
+        }
+
+        /* ======================================================
+           EXPANDERS
+        ====================================================== */
+
+        [data-testid="stExpander"] {
+
+            background:
+                rgba(8,19,31,0.52) !important;
+
+            border-radius:
+                16px !important;
+
+            border:
+                1px solid rgba(255,255,255,0.08) !important;
+        }
+
+        [data-testid="stExpander"] * {
+            color: #F8FAFC !important;
+        }
+
+        /* ======================================================
+           ALERTAS
+        ====================================================== */
 
         [data-testid="stAlert"] {
-            border-radius: 16px !important;
+
+            border-radius:
+                16px !important;
+
+            border:
+                1px solid rgba(255,255,255,0.08) !important;
         }
 
-        @media (prefers-color-scheme: dark) {
-            html, body, [data-testid="stAppViewContainer"] {
-                background: linear-gradient(135deg, #101820 0%, #071827 100%) !important;
-                color: #F8FAFC !important;
+        /* ======================================================
+           RESPONSIVIDADE
+        ====================================================== */
+
+        @media (max-width: 768px) {
+
+            .hz-hero,
+            .mb-header {
+
+                padding: 26px;
+
+                border-radius: 18px;
             }
 
-            h1, h2, h3, h4, h5, h6 {
-                color: #F8FAFC !important;
-            }
-
-            p, li, label, span, div {
-                color: #F8FAFC;
-            }
-
-            .hz-card,
-            .mb-card,
             div[data-testid="stMetric"] {
-                background: rgba(16, 24, 32, 0.94) !important;
-                border-color: rgba(225,232,237,0.18) !important;
-                border-left-color: #00ED64 !important;
-            }
 
-            .hz-card p,
-            .mb-card p {
-                color: #E1E8ED !important;
+                min-height:
+                    105px !important;
+
+                padding:
+                    14px !important;
             }
 
             div[data-testid="stMetricValue"] {
-                color: #00ED64 !important;
+                font-size: 1.5rem !important;
             }
 
             div[data-testid="stMetricLabel"] {
-                color: #E1E8ED !important;
-            }
-
-            input,
-            textarea,
-            [data-baseweb="select"] > div,
-            [data-baseweb="input"] > div {
-                background: #F8FAFC !important;
-                color: #101820 !important;
-            }
-
-            [data-testid="stDataFrame"] {
-                background: #FFFFFF !important;
+                font-size: 0.78rem !important;
             }
         }
+
         </style>
         """,
         unsafe_allow_html=True
@@ -240,41 +502,44 @@ def aplicar_tema_streamlit(st):
 
 
 def aplicar_tema_plotly():
-    template = pio.templates["plotly_white"]
 
-    template.layout.paper_bgcolor = "#FFFFFF"
-    template.layout.plot_bgcolor = "#FFFFFF"
+    template = pio.templates["plotly_dark"]
+
+    template.layout.paper_bgcolor = "rgba(0,0,0,0)"
+    template.layout.plot_bgcolor = "rgba(0,0,0,0)"
+
     template.layout.font = dict(
-        color="#101820",
+        color="#F8FAFC",
         size=14,
-        family="Inter, Arial"
+        family="Inter"
     )
+
+    template.layout.colorway = PALETA
+
     template.layout.title = dict(
         font=dict(
-            color="#0A2647",
-            size=20,
-            family="Montserrat, Arial"
+            color="#FFFFFF",
+            size=22,
+            family="Montserrat"
         )
     )
-    template.layout.colorway = PALETA
+
     template.layout.xaxis = dict(
-        tickfont=dict(color="#101820"),
-        title=dict(font=dict(color="#101820")),
-        gridcolor="#E6EEF5",
-        zerolinecolor="#D6DEE6",
-    )
-    template.layout.yaxis = dict(
-        tickfont=dict(color="#101820"),
-        title=dict(font=dict(color="#101820")),
-        gridcolor="#E6EEF5",
-        zerolinecolor="#D6DEE6",
-    )
-    template.layout.legend = dict(
-        font=dict(color="#101820"),
-        bgcolor="rgba(255,255,255,0.9)",
-        bordercolor="#D6DEE6",
-        borderwidth=1
+        tickfont=dict(color="#E1E8ED"),
+        title=dict(font=dict(color="#E1E8ED")),
+        gridcolor="rgba(255,255,255,0.08)"
     )
 
-    pio.templates["horizonte_tema"] = template
-    pio.templates.default = "horizonte_tema"
+    template.layout.yaxis = dict(
+        tickfont=dict(color="#E1E8ED"),
+        title=dict(font=dict(color="#E1E8ED")),
+        gridcolor="rgba(255,255,255,0.08)"
+    )
+
+    template.layout.legend = dict(
+        font=dict(color="#F8FAFC"),
+        bgcolor="rgba(8,19,31,0.72)"
+    )
+
+    pio.templates["horizonte_dark"] = template
+    pio.templates.default = "horizonte_dark"
