@@ -15,6 +15,15 @@ CORES = {
     "danger": "#DC2626",
     "warning": "#F59E0B",
     "success": "#00ED64",
+
+    # Compatibilidade com códigos antigos
+    "azul": "#0A2647",
+    "verde": "#00ED64",
+    "amarelo": "#F59E0B",
+    "laranja": "#F97316",
+    "fundo": "#101820",
+    "branco": "#F8FAFC",
+    "preto": "#101820",
 }
 
 
@@ -29,206 +38,112 @@ PALETA = [
 
 
 def aplicar_tema_streamlit(st):
-
     st.markdown(
         """
         <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap');
 
-        :root {
-            --hz-navy: #0A2647;
-            --hz-emerald: #00ED64;
-            --hz-titanium: #E1E8ED;
-            --hz-midnight: #101820;
-            --hz-white: #F8FAFC;
-        }
-
         html, body, [data-testid="stAppViewContainer"] {
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #071827 0%,
-                    #0A2647 60%,
-                    #064E3B 100%
-                ) !important;
-
+            background: linear-gradient(135deg, #071827 0%, #0A2647 62%, #064E3B 100%) !important;
             color: #F8FAFC !important;
+        }
 
+        body, p, li, label, input, textarea, button {
             font-family: 'Inter', sans-serif !important;
         }
 
-        * {
-            font-family: 'Inter', sans-serif !important;
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif !important;
+            color: #FFFFFF !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.02em;
         }
 
-        /* ======================================================
-           SIDEBAR
-        ====================================================== */
+        /* NÃO aplicar fonte global em ícones internos */
+        span[class*="material"],
+        i[class*="material"],
+        [class*="Material"],
+        [data-testid="stIconMaterial"] {
+            font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+        }
+
+        /* Oculta qualquer fallback textual de ícone que vaze */
+        span[title*="keyboard_double"],
+        button[title*="keyboard_double"],
+        [aria-label*="keyboard_double"],
+        [title="Keyboard_double_arrow_right"],
+        [title="Keyboard_double_arrow_left"] {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
 
         [data-testid="stSidebar"] {
-
-            background:
-                linear-gradient(
-                    180deg,
-                    #08131F 0%,
-                    #0A2647 100%
-                ) !important;
-
-            border-right:
-                1px solid rgba(255,255,255,0.08);
+            background: linear-gradient(180deg, #08131F 0%, #0A2647 100%) !important;
+            border-right: 1px solid rgba(255,255,255,0.08);
         }
 
         [data-testid="stSidebar"] * {
             color: #F8FAFC !important;
         }
 
-        [data-testid="stSidebarNav"] {
-            padding-top: 1rem;
-        }
-
         [data-testid="stSidebarNav"] a {
-
             border-radius: 12px !important;
-
-            margin-bottom: 4px;
-
-            transition:
-                all 0.15s ease-in-out;
+            margin-bottom: 4px !important;
         }
 
         [data-testid="stSidebarNav"] a:hover {
-
-            background:
-                rgba(255,255,255,0.08) !important;
+            background: rgba(255,255,255,0.10) !important;
         }
-
-        /* remove tooltip estranho */
-
-        span[title="Keyboard_double_arrow_right"],
-        span[title="Keyboard_double_arrow_left"] {
-            display: none !important;
-        }
-
-        /* ======================================================
-           HERO
-        ====================================================== */
 
         .hz-hero,
         .mb-header {
-
-            background:
-                linear-gradient(
-                    135deg,
-                    rgba(7,24,39,0.98),
-                    rgba(10,38,71,0.98),
-                    rgba(6,78,59,0.94)
-                );
-
-            border:
-                1px solid rgba(255,255,255,0.08);
-
+            background: linear-gradient(135deg, rgba(7,24,39,0.98), rgba(10,38,71,0.98), rgba(6,78,59,0.94));
+            border: 1px solid rgba(255,255,255,0.10);
             padding: 42px;
-
             border-radius: 24px;
-
             margin-bottom: 32px;
-
-            box-shadow:
-                0px 24px 60px rgba(0,0,0,0.35);
+            box-shadow: 0px 24px 60px rgba(0,0,0,0.35);
         }
 
         .hz-kicker {
-
             color: #00ED64 !important;
-
             font-weight: 800;
-
             font-size: 0.78rem;
-
             letter-spacing: 0.08em;
-
             text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 10px;
         }
 
         .hz-hero h1,
         .mb-header h1 {
-
             color: #FFFFFF !important;
-
-            font-size:
-                clamp(2.2rem, 4vw, 4.6rem);
-
+            font-size: clamp(2.1rem, 4vw, 4.4rem);
             line-height: 1.08;
-
             margin-top: 10px;
-
             margin-bottom: 18px;
-
-            font-family: 'Montserrat', sans-serif !important;
-
-            font-weight: 800 !important;
         }
 
         .hz-hero p,
         .mb-header p {
-
             color: #E1E8ED !important;
-
-            font-size: 1.1rem;
-
+            font-size: 1.08rem;
             line-height: 1.7;
-
             max-width: 1000px;
         }
 
-        /* ======================================================
-           TITULOS
-        ====================================================== */
-
-        h1, h2, h3, h4, h5, h6 {
-
-            color: #FFFFFF !important;
-
-            font-family: 'Montserrat', sans-serif !important;
-
-            font-weight: 800 !important;
-
-            letter-spacing: -0.02em;
-        }
-
-        p, li, label, span, div {
-            color: #F8FAFC;
-        }
-
-        /* ======================================================
-           CARDS
-        ====================================================== */
-
         .hz-card,
         .mb-card {
-
-            background:
-                rgba(8,19,31,0.72);
-
-            border:
-                1px solid rgba(255,255,255,0.08);
-
-            border-left:
-                6px solid #00ED64;
-
+            background: rgba(8,19,31,0.76);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-left: 6px solid #00ED64;
             border-radius: 20px;
-
             padding: 24px;
-
-            box-shadow:
-                0px 18px 40px rgba(0,0,0,0.24);
-
+            box-shadow: 0px 18px 40px rgba(0,0,0,0.24);
             backdrop-filter: blur(12px);
-
             margin-bottom: 18px;
-
             height: 100%;
         }
 
@@ -236,127 +151,69 @@ def aplicar_tema_streamlit(st):
         .hz-card h4,
         .mb-card h3,
         .mb-card h4 {
-
             color: #FFFFFF !important;
         }
 
         .hz-card p,
         .mb-card p {
-
             color: #E1E8ED !important;
-
             line-height: 1.65;
         }
 
-        /* ======================================================
-           METRICAS
-        ====================================================== */
-
         div[data-testid="stMetric"] {
-
-            background:
-                rgba(8,19,31,0.72) !important;
-
-            border:
-                1px solid rgba(255,255,255,0.08) !important;
-
-            border-left:
-                6px solid #00ED64 !important;
-
+            background: rgba(8,19,31,0.76) !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+            border-left: 6px solid #00ED64 !important;
             border-radius: 20px !important;
-
             padding: 18px !important;
-
             min-height: 128px !important;
-
             display: flex !important;
-
             flex-direction: column !important;
-
             justify-content: center !important;
-
-            box-shadow:
-                0px 18px 40px rgba(0,0,0,0.24) !important;
-
-            backdrop-filter: blur(10px);
-
+            box-shadow: 0px 18px 40px rgba(0,0,0,0.24) !important;
             overflow: hidden !important;
         }
 
         div[data-testid="stMetricLabel"] {
-
             color: #E1E8ED !important;
-
             font-weight: 700 !important;
-
-            font-size:
-                clamp(0.72rem, 1vw, 0.95rem) !important;
-
+            font-size: clamp(0.72rem, 1vw, 0.95rem) !important;
             overflow-wrap: anywhere !important;
         }
 
         div[data-testid="stMetricValue"] {
-
             color: #FFFFFF !important;
-
-            font-family:
-                'Montserrat', sans-serif !important;
-
+            font-family: 'Montserrat', sans-serif !important;
             font-weight: 800 !important;
-
-            font-size:
-                clamp(1.4rem, 2vw, 2.6rem) !important;
-
+            font-size: clamp(1.35rem, 2vw, 2.5rem) !important;
             overflow-wrap: anywhere !important;
         }
-
-        /* ======================================================
-           INPUTS
-        ====================================================== */
 
         input,
         textarea,
         [data-baseweb="input"] > div,
         [data-baseweb="select"] > div {
-
-            background:
-                rgba(255,255,255,0.96) !important;
-
-            color:
-                #101820 !important;
-
-            border:
-                1px solid rgba(255,255,255,0.12) !important;
-
-            border-radius:
-                14px !important;
+            background: rgba(255,255,255,0.98) !important;
+            color: #101820 !important;
+            border: 1px solid rgba(255,255,255,0.20) !important;
+            border-radius: 14px !important;
         }
 
-        input::placeholder {
-            color: #64748B !important;
+        input,
+        textarea {
+            color: #101820 !important;
         }
 
         label {
             color: #FFFFFF !important;
+            font-weight: 600 !important;
         }
 
-        /* ======================================================
-           FILE UPLOADER
-        ====================================================== */
-
         [data-testid="stFileUploader"] {
-
-            background:
-                rgba(255,255,255,0.08) !important;
-
-            border:
-                2px dashed rgba(255,255,255,0.16) !important;
-
-            border-radius:
-                18px !important;
-
-            padding:
-                18px !important;
+            background: rgba(255,255,255,0.08) !important;
+            border: 2px dashed rgba(255,255,255,0.18) !important;
+            border-radius: 18px !important;
+            padding: 18px !important;
         }
 
         [data-testid="stFileUploader"] * {
@@ -367,134 +224,81 @@ def aplicar_tema_streamlit(st):
             background: transparent !important;
         }
 
-        /* ======================================================
-           BOTÕES
-        ====================================================== */
+        [data-testid="stFileUploaderDropzone"] button {
+            background: #00ED64 !important;
+            color: #101820 !important;
+        }
 
         button,
         .stButton button,
         .stDownloadButton button {
-
-            background:
-                #00ED64 !important;
-
-            color:
-                #101820 !important;
-
-            border:
-                1px solid #00ED64 !important;
-
-            border-radius:
-                14px !important;
-
-            font-weight:
-                800 !important;
-
-            transition:
-                all 0.18s ease-in-out;
-
+            background: #00ED64 !important;
+            color: #101820 !important;
+            border: 1px solid #00ED64 !important;
+            border-radius: 14px !important;
+            font-weight: 800 !important;
             min-height: 48px;
+            transition: all 0.18s ease-in-out;
         }
 
         button:hover,
         .stButton button:hover,
         .stDownloadButton button:hover {
-
-            filter:
-                brightness(1.05);
-
-            transform:
-                translateY(-1px);
-
-            box-shadow:
-                0px 12px 30px rgba(0,237,100,0.26);
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+            box-shadow: 0px 12px 30px rgba(0,237,100,0.26);
         }
-
-        /* ======================================================
-           DATAFRAME
-        ====================================================== */
 
         [data-testid="stDataFrame"] {
-
-            border-radius:
-                18px !important;
-
-            overflow:
-                hidden !important;
-
-            border:
-                1px solid rgba(255,255,255,0.08) !important;
+            background: #FFFFFF !important;
+            border-radius: 18px !important;
+            overflow: hidden !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
         }
 
-        .stDataFrame * {
+        [data-testid="stDataFrame"] * {
             color: #101820 !important;
         }
 
-        /* ======================================================
-           EXPANDERS
-        ====================================================== */
-
         [data-testid="stExpander"] {
-
-            background:
-                rgba(8,19,31,0.52) !important;
-
-            border-radius:
-                16px !important;
-
-            border:
-                1px solid rgba(255,255,255,0.08) !important;
+            background: rgba(8,19,31,0.58) !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
         }
 
         [data-testid="stExpander"] * {
             color: #F8FAFC !important;
         }
 
-        /* ======================================================
-           ALERTAS
-        ====================================================== */
-
         [data-testid="stAlert"] {
-
-            border-radius:
-                16px !important;
-
-            border:
-                1px solid rgba(255,255,255,0.08) !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
         }
 
-        /* ======================================================
-           RESPONSIVIDADE
-        ====================================================== */
+        [data-testid="stAlert"] * {
+            color: inherit !important;
+        }
 
-        @media (max-width: 768px) {
-
+        @media (max-width: 900px) {
             .hz-hero,
             .mb-header {
-
-                padding: 26px;
-
+                padding: 28px;
                 border-radius: 18px;
             }
 
             div[data-testid="stMetric"] {
-
-                min-height:
-                    105px !important;
-
-                padding:
-                    14px !important;
+                min-height: 108px !important;
+                padding: 14px !important;
             }
 
             div[data-testid="stMetricValue"] {
-                font-size: 1.5rem !important;
+                font-size: 1.55rem !important;
             }
 
             div[data-testid="stMetricLabel"] {
                 font-size: 0.78rem !important;
             }
         }
-
         </style>
         """,
         unsafe_allow_html=True
@@ -502,20 +306,16 @@ def aplicar_tema_streamlit(st):
 
 
 def aplicar_tema_plotly():
-
     template = pio.templates["plotly_dark"]
 
     template.layout.paper_bgcolor = "rgba(0,0,0,0)"
     template.layout.plot_bgcolor = "rgba(0,0,0,0)"
-
     template.layout.font = dict(
         color="#F8FAFC",
         size=14,
         family="Inter"
     )
-
     template.layout.colorway = PALETA
-
     template.layout.title = dict(
         font=dict(
             color="#FFFFFF",
@@ -523,19 +323,18 @@ def aplicar_tema_plotly():
             family="Montserrat"
         )
     )
-
     template.layout.xaxis = dict(
         tickfont=dict(color="#E1E8ED"),
         title=dict(font=dict(color="#E1E8ED")),
-        gridcolor="rgba(255,255,255,0.08)"
+        gridcolor="rgba(255,255,255,0.08)",
+        zerolinecolor="rgba(255,255,255,0.12)",
     )
-
     template.layout.yaxis = dict(
         tickfont=dict(color="#E1E8ED"),
         title=dict(font=dict(color="#E1E8ED")),
-        gridcolor="rgba(255,255,255,0.08)"
+        gridcolor="rgba(255,255,255,0.08)",
+        zerolinecolor="rgba(255,255,255,0.12)",
     )
-
     template.layout.legend = dict(
         font=dict(color="#F8FAFC"),
         bgcolor="rgba(8,19,31,0.72)"
