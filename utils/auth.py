@@ -76,7 +76,35 @@ def fazer_logout():
             del st.session_state[chave]
 
 
+def tela_login():
+    st.markdown("""
+    <div class="mb-header">
+        <h1>🔐 MB Health Intelligence</h1>
+        <p>
+            Acesso restrito à plataforma de inteligência epidemiológica.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+
+    with col2:
+        st.markdown("## Entrar no sistema")
+
+        usuario = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password")
+
+        if st.button("Entrar", use_container_width=True):
+            if fazer_login(usuario, senha):
+                st.success("Login realizado com sucesso.")
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos.")
+
+        st.caption("Usuário de teste: admin | Senha: admin123")
+
+
 def exigir_login():
     if not usuario_logado():
-        st.warning("🔐 Faça login para acessar esta área.")
+        tela_login()
         st.stop()
