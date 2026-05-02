@@ -9,10 +9,9 @@ from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
 from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
 from mappings.violencia import aplicar_mapeamento_violencia, gerar_tabela_publica_violencia
 from mappings.arbovirose import aplicar_mapeamento_arbovirose, gerar_tabela_publica_arbovirose
-from mappings.intoxicacao_exogena import (
-    aplicar_mapeamento_intoxicacao_exogena,
-    gerar_tabela_publica_intoxicacao_exogena,
-)
+from mappings.intoxicacao_exogena import aplicar_mapeamento_intoxicacao_exogena, gerar_tabela_publica_intoxicacao_exogena
+from mappings.leptospirose import aplicar_mapeamento_leptospirose, gerar_tabela_publica_leptospirose
+from mappings.toxoplasmose import aplicar_mapeamento_toxoplasmose, gerar_tabela_publica_toxoplasmose
 
 from config.agravos import AGRAVOS
 
@@ -20,6 +19,8 @@ from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
 from modulos.painel_violencia import render_painel_violencia
 from modulos.painel_arbovirose import render_painel_arbovirose
 from modulos.painel_intoxicacao_exogena import render_painel_intoxicacao_exogena
+from modulos.painel_leptospirose import render_painel_leptospirose
+from modulos.painel_toxoplasmose import render_painel_toxoplasmose
 
 
 st.set_page_config(
@@ -31,6 +32,7 @@ st.set_page_config(
 
 aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
+
 
 st.markdown("""
 <div class="mb-header">
@@ -106,22 +108,37 @@ if agravo_confirmado != agravo_detectado:
 
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
+
     df = aplicar_mapeamento(df)
     df_publico = gerar_tabela_publica(df)
 
 elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
+
     df = aplicar_mapeamento_violencia(df)
     df_publico = gerar_tabela_publica_violencia(df)
 
 elif agravo_confirmado == "Dengue/Chikungunya":
+
     df = aplicar_mapeamento_arbovirose(df)
     df_publico = gerar_tabela_publica_arbovirose(df)
 
 elif agravo_confirmado == "Intoxicação Exógena":
+
     df = aplicar_mapeamento_intoxicacao_exogena(df)
     df_publico = gerar_tabela_publica_intoxicacao_exogena(df)
 
+elif agravo_confirmado == "Leptospirose":
+
+    df = aplicar_mapeamento_leptospirose(df)
+    df_publico = gerar_tabela_publica_leptospirose(df)
+
+elif agravo_confirmado == "Toxoplasmose":
+
+    df = aplicar_mapeamento_toxoplasmose(df, arquivo.name)
+    df_publico = gerar_tabela_publica_toxoplasmose(df)
+
 else:
+
     df_publico = df.copy()
 
 
@@ -240,49 +257,68 @@ st.markdown("---")
 st.markdown("## 🚀 Acessar painel específico")
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
-    if st.button(
-        "👷 Abrir Painel Analítico — Acidente de Trabalho Grave",
-        use_container_width=True
-    ):
+
+    if st.button("👷 Abrir Painel Analítico — Acidente de Trabalho Grave", use_container_width=True):
         st.session_state["abrir_painel_acidente_trabalho"] = True
         st.session_state["abrir_painel_violencia"] = False
         st.session_state["abrir_painel_arbovirose"] = False
         st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
 
 elif agravo_confirmado == "Violência Interpessoal/Autoprovocada":
-    if st.button(
-        "🛡️ Abrir Painel Analítico — Violência Interpessoal/Autoprovocada",
-        use_container_width=True
-    ):
+
+    if st.button("🛡️ Abrir Painel Analítico — Violência Interpessoal/Autoprovocada", use_container_width=True):
         st.session_state["abrir_painel_violencia"] = True
         st.session_state["abrir_painel_acidente_trabalho"] = False
         st.session_state["abrir_painel_arbovirose"] = False
         st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
 
 elif agravo_confirmado == "Dengue/Chikungunya":
-    if st.button(
-        "🦟 Abrir Painel Analítico — Arboviroses",
-        use_container_width=True
-    ):
+
+    if st.button("🦟 Abrir Painel Analítico — Arboviroses", use_container_width=True):
         st.session_state["abrir_painel_arbovirose"] = True
         st.session_state["abrir_painel_acidente_trabalho"] = False
         st.session_state["abrir_painel_violencia"] = False
         st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
 
 elif agravo_confirmado == "Intoxicação Exógena":
-    if st.button(
-        "☣️ Abrir Painel Analítico — Intoxicação Exógena",
-        use_container_width=True
-    ):
+
+    if st.button("☣️ Abrir Painel Analítico — Intoxicação Exógena", use_container_width=True):
         st.session_state["abrir_painel_intoxicacao"] = True
         st.session_state["abrir_painel_acidente_trabalho"] = False
         st.session_state["abrir_painel_violencia"] = False
         st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Leptospirose":
+
+    if st.button("🐀 Abrir Painel Analítico — Leptospirose", use_container_width=True):
+        st.session_state["abrir_painel_leptospirose"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_toxoplasmose"] = False
+
+elif agravo_confirmado == "Toxoplasmose":
+
+    if st.button("🧬 Abrir Painel Analítico — Toxoplasmose", use_container_width=True):
+        st.session_state["abrir_painel_toxoplasmose"] = True
+        st.session_state["abrir_painel_acidente_trabalho"] = False
+        st.session_state["abrir_painel_violencia"] = False
+        st.session_state["abrir_painel_arbovirose"] = False
+        st.session_state["abrir_painel_intoxicacao"] = False
+        st.session_state["abrir_painel_leptospirose"] = False
 
 else:
-    st.info(
-        "Este agravo já foi reconhecido, mas o painel específico ainda será criado."
-    )
+
+    st.info("Este agravo já foi reconhecido, mas o painel específico ainda será criado.")
 
 
 st.markdown("---")
@@ -343,5 +379,13 @@ if st.session_state.get("abrir_painel_intoxicacao", False):
     st.markdown("---")
     render_painel_intoxicacao_exogena(df)
 
+if st.session_state.get("abrir_painel_leptospirose", False):
+    st.markdown("---")
+    render_painel_leptospirose(df)
 
-st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 9")
+if st.session_state.get("abrir_painel_toxoplasmose", False):
+    st.markdown("---")
+    render_painel_toxoplasmose(df)
+
+
+st.caption("SINAN Decoder • Leitor DBF Inteligente • Versão 10")
