@@ -78,18 +78,27 @@ def fazer_logout():
 
 def tela_login():
     st.markdown("""
-    <div class="mb-header">
-        <h1>🔐 MB Health Intelligence</h1>
+    <div class="hz-hero">
+        <span class="hz-kicker">Horizonte GovTech</span>
+        <h1>Horizonte Health Intelligence</h1>
         <p>
-            Acesso restrito à plataforma de inteligência epidemiológica.
+            Plataforma segura para inteligência epidemiológica, auditoria de dados
+            e apoio à decisão em Vigilância em Saúde.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    col1, col2, col3 = st.columns([1, 1.15, 1])
 
     with col2:
-        st.markdown("## Entrar no sistema")
+        st.markdown("""
+        <div class="hz-card">
+            <h3>🔐 Acesso ao sistema</h3>
+            <p>
+                Entre com suas credenciais para acessar os módulos analíticos.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
         usuario = st.text_input("Usuário")
         senha = st.text_input("Senha", type="password")
@@ -101,7 +110,7 @@ def tela_login():
             else:
                 st.error("Usuário ou senha inválidos.")
 
-        st.caption("Usuário de teste: admin | Senha: admin123")
+        st.caption("Ambiente beta: admin/admin123 ou demo/demo123")
 
 
 def exigir_login():
