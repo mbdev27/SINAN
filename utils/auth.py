@@ -1,3 +1,4 @@
+import base64
 import streamlit as st
 from pathlib import Path
 
@@ -16,6 +17,14 @@ USUARIOS_PADRAO = {
         "email": "demo@horizonte.local"
     }
 }
+
+
+def imagem_base64(caminho):
+    try:
+        with open(caminho, "rb") as img:
+            return base64.b64encode(img.read()).decode()
+    except Exception:
+        return None
 
 
 def carregar_usuarios():
@@ -96,74 +105,188 @@ def fazer_logout():
 
 
 def css_login():
-    st.markdown(
+    fundo = None
+
+    for caminho in [
+        "assets/digital_presence.png",
+        "digital_presence.png",
+    ]:
+        if Path(caminho).exists():
+            fundo = imagem_base64(caminho)
+            break
+
+    background_css = (
+        f"""
+        background:
+            linear-gradient(90deg, rgba(7,24,39,0.96) 0%, rgba(7,24,39,0.82) 45%, rgba(7,24,39,0.45) 100%),
+            url("data:image/png;base64,{fundo}");
+        background-size: cover;
+        background-position: center;
         """
+        if fundo
+        else """
+        background:
+            radial-gradient(circle at 20% 20%, rgba(0,237,100,0.18), transparent 34%),
+            linear-gradient(135deg, #071827 0%, #0A2647 58%, #064E3B 100%);
+        """
+    )
+
+    st.markdown(
+        f"""
         <style>
         [data-testid="stSidebar"],
-        [data-testid="collapsedControl"] {
+        [data-testid="collapsedControl"] {{
             display: none !important;
-        }
-
-        section[data-testid="stSidebar"] {
             visibility: hidden !important;
             width: 0 !important;
-        }
+        }}
 
-        .block-container {
-            max-width: 1180px !important;
-            padding-top: 3rem !important;
-        }
+        .block-container {{
+            max-width: 100% !important;
+            padding: 0 !important;
+        }}
 
-        .hz-login-shell {
-            min-height: 88vh;
-            display: flex;
+        [data-testid="stAppViewContainer"] {{
+            {background_css}
+            min-height: 100vh;
+        }}
+
+        .hz-login-page {{
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: minmax(340px, 520px) 1fr;
             align-items: center;
-            justify-content: center;
-        }
+            padding: 56px clamp(24px, 5vw, 88px);
+            gap: 48px;
+        }}
 
-        .hz-login-card {
-            width: min(100%, 460px);
-            background: rgba(8, 19, 31, 0.82);
-            border: 1px solid rgba(225, 232, 237, 0.16);
-            border-radius: 28px;
+        .hz-login-card {{
+            width: 100%;
+            background: rgba(8, 19, 31, 0.78);
+            border: 1px solid rgba(225, 232, 237, 0.18);
+            border-radius: 30px;
             padding: 34px;
-            box-shadow: 0 28px 70px rgba(0,0,0,0.38);
-            backdrop-filter: blur(14px);
-        }
+            box-shadow: 0 30px 80px rgba(0,0,0,0.48);
+            backdrop-filter: blur(18px);
+        }}
 
-        .hz-login-logo {
+        .hz-logo-wrap {{
             display: flex;
             justify-content: center;
-            margin-bottom: 22px;
-        }
+            margin-bottom: 20px;
+        }}
 
-        .hz-login-title {
+        .hz-title {{
             text-align: center;
             color: #FFFFFF !important;
-            font-size: 1.55rem;
-            font-weight: 800;
+            font-size: 1.8rem;
+            font-weight: 900;
             margin-bottom: 8px;
-        }
+            letter-spacing: -0.03em;
+        }}
 
-        .hz-login-subtitle {
+        .hz-subtitle {{
             text-align: center;
             color: #E1E8ED !important;
-            line-height: 1.6;
-            margin-bottom: 26px;
-        }
+            line-height: 1.65;
+            margin-bottom: 28px;
+            font-size: 0.98rem;
+        }}
 
-        .hz-login-actions {
+        .hz-side-copy {{
+            max-width: 560px;
+        }}
+
+        .hz-kicker-login {{
+            color: #00ED64 !important;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }}
+
+        .hz-side-copy h1 {{
+            color: #FFFFFF !important;
+            font-size: clamp(2.4rem, 5vw, 5rem);
+            line-height: 1.02;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin-bottom: 22px;
+        }}
+
+        .hz-side-copy p {{
+            color: #E1E8ED !important;
+            font-size: 1.08rem;
+            line-height: 1.8;
+            max-width: 520px;
+        }}
+
+        .hz-pills {{
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
-            margin-top: 14px;
-        }
+            margin-top: 26px;
+        }}
 
-        .hz-login-note {
+        .hz-pill {{
+            color: #E1E8ED !important;
+            border: 1px solid rgba(0,237,100,0.35);
+            background: rgba(0,237,100,0.08);
+            padding: 9px 13px;
+            border-radius: 999px;
+            font-size: 0.86rem;
+            font-weight: 700;
+        }}
+
+        input {{
+            background: rgba(248,250,252,0.96) !important;
+            color: #101820 !important;
+            border-radius: 14px !important;
+        }}
+
+        label {{
+            color: #F8FAFC !important;
+            font-weight: 700 !important;
+        }}
+
+        button {{
+            background: #00ED64 !important;
+            color: #101820 !important;
+            border: 1px solid #00ED64 !important;
+            border-radius: 14px !important;
+            font-weight: 900 !important;
+            min-height: 48px !important;
+        }}
+
+        button:hover {{
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+            box-shadow: 0px 14px 36px rgba(0,237,100,0.32);
+        }}
+
+        .hz-login-note {{
             text-align: center;
             color: #94A3B8 !important;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             margin-top: 18px;
-        }
+        }}
+
+        @media (max-width: 900px) {{
+            .hz-login-page {{
+                grid-template-columns: 1fr;
+                padding: 32px 18px;
+            }}
+
+            .hz-side-copy {{
+                display: none;
+            }}
+
+            .hz-login-card {{
+                margin: 0 auto;
+                max-width: 460px;
+            }}
+        }}
         </style>
         """,
         unsafe_allow_html=True
@@ -171,15 +294,13 @@ def css_login():
 
 
 def exibir_logo():
-    caminhos = [
-        Path("assets/horizonte_logo.png"),
-        Path("assets/logo.png"),
-        Path("horizonte_logo.png"),
-    ]
-
-    for caminho in caminhos:
-        if caminho.exists():
-            st.image(str(caminho), width=210)
+    for caminho in [
+        "assets/horizonte_logo.png",
+        "horizonte_logo.png",
+        "assets/logo.png",
+    ]:
+        if Path(caminho).exists():
+            st.image(caminho, width=220)
             return
 
     st.markdown(
@@ -204,16 +325,18 @@ def tela_login():
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
 
-    st.markdown('<div class="hz-login-shell"><div class="hz-login-card">', unsafe_allow_html=True)
+    st.markdown('<div class="hz-login-page">', unsafe_allow_html=True)
 
-    st.markdown('<div class="hz-login-logo">', unsafe_allow_html=True)
+    st.markdown('<div class="hz-login-card">', unsafe_allow_html=True)
+
+    st.markdown('<div class="hz-logo-wrap">', unsafe_allow_html=True)
     exibir_logo()
     st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state["auth_tela"] == "login":
-        st.markdown('<div class="hz-login-title">Horizonte Health Intelligence</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hz-title">Horizonte Health Intelligence</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="hz-login-subtitle">Plataforma segura para leitura de bancos DBF do SINAN, auditoria epidemiológica e apoio à decisão em Vigilância em Saúde.</div>',
+            '<div class="hz-subtitle">Acesse sua central segura de leitura DBF, auditoria epidemiológica e painéis inteligentes do SINAN.</div>',
             unsafe_allow_html=True
         )
 
@@ -246,9 +369,9 @@ def tela_login():
         )
 
     elif st.session_state["auth_tela"] == "cadastro":
-        st.markdown('<div class="hz-login-title">Criar cadastro</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hz-title">Criar cadastro</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="hz-login-subtitle">Solicite ou crie um acesso para ambiente de testes da plataforma.</div>',
+            '<div class="hz-subtitle">Solicite um acesso para testar a plataforma Horizonte.</div>',
             unsafe_allow_html=True
         )
 
@@ -280,7 +403,7 @@ def tela_login():
                             "email": email,
                         }
                     )
-                    st.success("Cadastro criado para este ambiente de testes. Faça login para continuar.")
+                    st.success("Cadastro criado. Faça login para continuar.")
                     st.session_state["auth_tela"] = "login"
                     st.rerun()
 
@@ -289,9 +412,9 @@ def tela_login():
             st.rerun()
 
     elif st.session_state["auth_tela"] == "redefinir":
-        st.markdown('<div class="hz-login-title">Redefinir senha</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hz-title">Redefinir senha</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="hz-login-subtitle">Informe seu usuário e uma nova senha para o ambiente de testes.</div>',
+            '<div class="hz-subtitle">Informe seu usuário e uma nova senha para o ambiente de testes.</div>',
             unsafe_allow_html=True
         )
 
@@ -315,7 +438,7 @@ def tela_login():
                     dados = dict(usuarios[usuario])
                     dados["senha"] = nova_senha
                     salvar_usuario_runtime(usuario, dados)
-                    st.success("Senha redefinida neste ambiente de testes.")
+                    st.success("Senha redefinida.")
                     st.session_state["auth_tela"] = "login"
                     st.rerun()
 
@@ -323,7 +446,29 @@ def tela_login():
             st.session_state["auth_tela"] = "login"
             st.rerun()
 
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div class="hz-side-copy">
+            <div class="hz-kicker-login">Secure • Innovate • Elevate</div>
+            <h1>Inteligência pública com segurança digital.</h1>
+            <p>
+                A Horizonte transforma bancos epidemiológicos em informação clara,
+                auditável e estratégica para apoiar decisões em Vigilância em Saúde.
+            </p>
+            <div class="hz-pills">
+                <span class="hz-pill">SINAN DBF</span>
+                <span class="hz-pill">Auditoria epidemiológica</span>
+                <span class="hz-pill">GovTech</span>
+                <span class="hz-pill">Dados seguros</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def exigir_login():
