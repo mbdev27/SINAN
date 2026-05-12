@@ -14,6 +14,8 @@ from mappings.intoxicacao_exogena import aplicar_mapeamento_intoxicacao_exogena,
 from mappings.leptospirose import aplicar_mapeamento_leptospirose, gerar_tabela_publica_leptospirose
 from mappings.toxoplasmose import aplicar_mapeamento_toxoplasmose, gerar_tabela_publica_toxoplasmose
 
+from mappings.generico_sinan import aplicar_mapeamento_generico, gerar_tabela_publica_generica
+
 from config.agravos import AGRAVOS
 
 from modulos.painel_acidente_trabalho import render_painel_acidente_trabalho
@@ -22,6 +24,7 @@ from modulos.painel_arbovirose import render_painel_arbovirose
 from modulos.painel_intoxicacao_exogena import render_painel_intoxicacao_exogena
 from modulos.painel_leptospirose import render_painel_leptospirose
 from modulos.painel_toxoplasmose import render_painel_toxoplasmose
+from modulos.painel_generico_sinan import render_painel_generico_sinan
 
 
 st.set_page_config(
@@ -132,6 +135,8 @@ if agravo_confirmado != agravo_detectado:
     )
 
 
+painel_especifico = True
+
 if agravo_confirmado == "Acidente de Trabalho Grave":
     df = aplicar_mapeamento(df)
     df_publico = gerar_tabela_publica(df)
@@ -157,7 +162,9 @@ elif agravo_confirmado == "Toxoplasmose":
     df_publico = gerar_tabela_publica_toxoplasmose(df)
 
 else:
-    df_publico = df.copy()
+    painel_especifico = False
+    df = aplicar_mapeamento_generico(df)
+    df_publico = gerar_tabela_publica_generica(df)
 
 
 st.session_state["df_sinan_atual"] = df
@@ -317,10 +324,6 @@ with st.expander("🔍 Ver inconsistências detalhadas"):
     )
 
 
-st.markdown("---")
-st.markdown("## 🚀 Abrir painel analítico")
-
-
 def fechar_paineis():
     for chave in [
         "abrir_painel_acidente_trabalho",
@@ -329,8 +332,13 @@ def fechar_paineis():
         "abrir_painel_intoxicacao",
         "abrir_painel_leptospirose",
         "abrir_painel_toxoplasmose",
+        "abrir_painel_generico",
     ]:
         st.session_state[chave] = False
+
+
+st.markdown("---")
+st.markdown("## 🚀 Abrir painel analítico")
 
 
 if agravo_confirmado == "Acidente de Trabalho Grave":
@@ -362,6 +370,16 @@ elif agravo_confirmado == "Toxoplasmose":
     if st.button("🧬 Abrir Painel — Toxoplasmose", use_container_width=True):
         fechar_paineis()
         st.session_state["abrir_painel_toxoplasmose"] = True
+
+else:
+    st.info(
+        "Este agravo ainda não possui painel específico. "
+        "Você pode abrir o Painel Universal SINAN para análise geral do banco."
+    )
+
+    if st.button("📊 Abrir Painel Universal SINAN", use_container_width=True):
+        fechar_paineis()
+        st.session_state["abrir_painel_generico"] = True
 
 
 st.markdown("---")
@@ -429,6 +447,13 @@ if st.session_state.get("abrir_painel_leptospirose", False):
 if st.session_state.get("abrir_painel_toxoplasmose", False):
     st.markdown("---")
     render_painel_toxoplasmose(df)
+
+if st.session_state.get("abrir_painel_generico", False):
+    st.markdown("---")
+    render_painel_generico_sinan(
+        df,
+        nome_agravo=agravo_confirmado
+    )
 
 
 st.caption("Horizonte Health Intelligence • Beta 1")
