@@ -6,6 +6,11 @@ from utils.cnes import (
     localizar_nome_por_cnes
 )
 
+try:
+    from config.catalogo_agravos import identificar_por_nome_arquivo
+except Exception:
+    identificar_por_nome_arquivo = None
+
 
 def classificar_qualidade(score):
     try:
@@ -26,7 +31,7 @@ def classificar_qualidade(score):
 
 
 def calcular_score_banco(df):
-    if df.empty:
+    if df is None or df.empty:
         return 0
 
     total_celulas = df.shape[0] * df.shape[1]
@@ -48,6 +53,13 @@ def calcular_score_banco(df):
 
 
 def detectar_colunas_vazias(df):
+    if df is None or df.empty:
+        return pd.DataFrame(columns=[
+            "Coluna",
+            "Preenchimento (%)",
+            "Vazio (%)"
+        ])
+
     resultado = []
 
     for coluna in df.columns:
@@ -65,12 +77,18 @@ def detectar_colunas_vazias(df):
         })
 
     resultado = pd.DataFrame(resultado)
-    resultado = resultado.sort_values("Preenchimento (%)")
 
-    return resultado.reset_index(drop=True)
+    return (
+        resultado
+        .sort_values("Preenchimento (%)")
+        .reset_index(drop=True)
+    )
 
 
 def detectar_duplicidades(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     colunas = []
 
     for c in [
@@ -98,6 +116,9 @@ def detectar_duplicidades(df):
 
 
 def detectar_sexo_incompativel(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     if "CS_SEXO" not in df.columns:
         return pd.DataFrame()
 
@@ -130,13 +151,16 @@ def detectar_sexo_incompativel(df):
     inconsistentes = df[
         (sexo == "M")
         &
-        (~gest.isin(["5", "6", "9", ""]))
+        (~gest.isin(["5", "6", "9", "", "NAN", "NONE"]))
     ]
 
     return inconsistentes.reset_index(drop=True)
 
 
 def detectar_idade_incompativel(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     coluna_idade = None
 
     for c in [
@@ -166,6 +190,9 @@ def detectar_idade_incompativel(df):
 
 
 def detectar_cid_incompativel(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     coluna_cid = None
 
     for c in [
@@ -211,6 +238,9 @@ def detectar_cid_incompativel(df):
 
 
 def detectar_municipio_divergente(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     col_not = None
     col_res = None
 
@@ -259,6 +289,15 @@ def detectar_municipio_divergente(df):
 
 
 def calcular_incompletude_por_unidade(df):
+    if df is None or df.empty:
+        return pd.DataFrame(columns=[
+            "CNES",
+            "Nome da unidade",
+            "Registros",
+            "Preenchimento (%)",
+            "Classificação"
+        ])
+
     col_unidade = None
 
     for candidato in [
@@ -328,6 +367,14 @@ def inferir_agravo(df, nome_arquivo=""):
 
     ranking = []
 
+    agravo_catalogo = None
+
+    if identificar_por_nome_arquivo is not None:
+        try:
+            agravo_catalogo = identificar_por_nome_arquivo(nome_arquivo)
+        except Exception:
+            agravo_catalogo = None
+
     def pontuar(nome_agravo, termos, bonus_arquivo):
         score = 0
         encontrados = []
@@ -343,6 +390,10 @@ def inferir_agravo(df, nome_arquivo=""):
                 encontrados.append("NOME_ARQUIVO")
                 break
 
+        if agravo_catalogo == nome_agravo:
+            score += 10
+            encontrados.append("CATALOGO_ARQUIVO")
+
         ranking.append({
             "Agravo": nome_agravo,
             "Score": score,
@@ -351,39 +402,173 @@ def inferir_agravo(df, nome_arquivo=""):
 
     pontuar(
         "Acidente de Trabalho Grave",
-        ["CID", "ACID", "OCUPA", "EVOLUCAO", "CAT", "TRAB"],
-        ["ACIDENTE", "ACID"]
+        [
+            "CID",
+            "ACID",
+            "OCUPA",
+            "EVOLUCAO",
+            "CAT",
+            "TRAB",
+            "DT_ACID",
+            "TIPO_ACID",
+        ],
+        [
+            "ACGRANET",
+            "ACIDENTE",
+            "ACID"
+        ]
+    )
+
+    pontuar(
+        "Acidente de Trabalho com Exposição a Material Biológico",
+        [
+            "MATERIAL",
+            "TP_EXPOS",
+            "CIRC_ACID",
+            "AGENTE",
+            "FONTE",
+            "EPI_LUVA",
+            "VAC_HEP_B",
+            "ACID",
+            "TRAB",
+        ],
+        [
+            "ACBIONET",
+            "BIO",
+            "MATERIAL"
+        ]
     )
 
     pontuar(
         "Violência Interpessoal/Autoprovocada",
-        ["VIOL", "AGRESS", "AUTOR", "SEXUAL", "LES_AUTOP", "REL_TRAB"],
-        ["VIOL"]
+        [
+            "VIOL",
+            "AGRESS",
+            "AUTOR",
+            "SEXUAL",
+            "LES_AUTOP",
+            "REL_TRAB",
+            "LOCAL_OCOR",
+            "NUM_ENVOLV",
+            "AUTOR_SEXO",
+        ],
+        [
+            "VIOLENET",
+            "VIOL"
+        ]
     )
 
     pontuar(
         "Dengue/Chikungunya",
-        ["FEBRE", "MIALGIA", "CEFALEIA", "EXANTEMA", "SOROTIPO", "CLASSI_FIN", "CRITERIO", "ALRM", "GRAV", "RESUL_NS1", "RESUL_SORO", "DENGUE", "CHIK"],
-        ["DENG", "CHIK", "ARBOV"]
+        [
+            "FEBRE",
+            "MIALGIA",
+            "CEFALEIA",
+            "EXANTEMA",
+            "SOROTIPO",
+            "CLASSI_FIN",
+            "CRITERIO",
+            "ALRM",
+            "GRAV",
+            "RESUL_NS1",
+            "RESUL_SORO",
+            "DENGUE",
+            "CHIK"
+        ],
+        [
+            "DENGNET",
+            "DENGON",
+            "CHIKON",
+            "DENG",
+            "CHIK",
+            "ARBOV"
+        ]
     )
 
     pontuar(
         "Intoxicação Exógena",
-        ["TOX", "INTOX", "AGENTE", "AGENT", "EXPOS", "EXPO", "CIRCUNST", "CLASSI_FIN", "CRITERIO", "HOSPITALIZ", "DT_INTERNA", "EVOLUCAO", "TP_ATEND", "GRUPO_AGEN"],
-        ["IEXOG", "INTOX", "EXOG", "TOX"]
+        [
+            "TOX",
+            "INTOX",
+            "AGENTE",
+            "AGENT",
+            "EXPOS",
+            "EXPO",
+            "CIRCUNST",
+            "CLASSI_FIN",
+            "CRITERIO",
+            "HOSPITALIZ",
+            "DT_INTERNA",
+            "EVOLUCAO",
+            "TP_ATEND",
+            "GRUPO_AGEN"
+        ],
+        [
+            "IEXOGNET",
+            "IEXOG",
+            "INTOX",
+            "EXOG",
+            "TOX"
+        ]
     )
 
     pontuar(
         "Leptospirose",
-        ["LEPTO", "MIALGIA", "ICTERICIA", "PANTUR", "INSUF_RENAL", "ROEDOR", "ROEDORES", "ENCHENTE", "LAMA", "ESGOTO", "SOROVAR", "MICRO", "ELISA"],
-        ["LEPTO", "LEPTOSPIROSE"]
+        [
+            "LEPTO",
+            "MIALGIA",
+            "ICTERICIA",
+            "PANTUR",
+            "INSUF_RENAL",
+            "ROEDOR",
+            "ROEDORES",
+            "ENCHENTE",
+            "LAMA",
+            "ESGOTO",
+            "SOROVAR",
+            "MICRO",
+            "ELISA"
+        ],
+        [
+            "LEPTONET",
+            "LEPTO",
+            "LEPTOSPIROSE"
+        ]
     )
 
     pontuar(
         "Toxoplasmose",
-        ["TOXO", "TOXOPLAS", "CLASSI_FIN", "CRITERIO", "EVOLUCAO", "TPAUTOCTO", "DT_ENCERRA", "CS_GESTANT"],
-        ["TOXO", "TOXOPLASMOSE", "GESTACIONAL", "CONGENITA", "CONGÊNITA"]
+        [
+            "TOXO",
+            "TOXOPLAS",
+            "CLASSI_FIN",
+            "CRITERIO",
+            "EVOLUCAO",
+            "TPAUTOCTO",
+            "DT_ENCERRA",
+            "CS_GESTANT"
+        ],
+        [
+            "TOXO",
+            "TOXOPLASMOSE",
+            "GESTACIONAL",
+            "CONGENITA",
+            "CONGÊNITA"
+        ]
     )
+
+    if agravo_catalogo:
+        nomes_no_ranking = [
+            item["Agravo"]
+            for item in ranking
+        ]
+
+        if agravo_catalogo not in nomes_no_ranking:
+            ranking.append({
+                "Agravo": agravo_catalogo,
+                "Score": 10,
+                "Colunas identificadas": "CATALOGO_ARQUIVO"
+            })
 
     ranking = sorted(
         ranking,
@@ -391,15 +576,25 @@ def inferir_agravo(df, nome_arquivo=""):
         reverse=True
     )
 
-    melhor = ranking[0]
+    melhor = ranking[0] if ranking else {
+        "Agravo": agravo_catalogo or "Agravo SINAN",
+        "Score": 0,
+        "Colunas identificadas": ""
+    }
+
     score = melhor["Score"]
 
-    if score >= 5:
+    if score >= 10:
         confianca = "Alta"
-    elif score >= 3:
+
+    elif score >= 5:
         confianca = "Média"
-    else:
+
+    elif score >= 3:
         confianca = "Baixa"
+
+    else:
+        confianca = "Muito baixa"
 
     return {
         "agravo": melhor["Agravo"],
@@ -407,7 +602,7 @@ def inferir_agravo(df, nome_arquivo=""):
         "score": score,
         "ficha_sugerida": f"{melhor['Agravo']}.pdf",
         "motivo": (
-            f"Foram encontradas colunas compatíveis: "
+            f"Foram encontradas evidências compatíveis: "
             f"{melhor['Colunas identificadas']}"
         ),
         "ranking": ranking
