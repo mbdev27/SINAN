@@ -34,6 +34,108 @@ aplicar_tema_plotly()
 
 
 # ============================================================
+# CSS LOCAL DA PÁGINA
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+    .hz-hero {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(10,38,71,0.92),
+                rgba(6,78,59,0.92)
+            );
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 28px;
+        padding: 34px;
+        margin-bottom: 28px;
+        box-shadow: 0 24px 70px rgba(0,0,0,0.22);
+    }
+
+    .hz-kicker {
+        color: #00ED64;
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 14px;
+    }
+
+    .hz-hero h1 {
+        color: #FFFFFF;
+        font-size: clamp(2rem, 4vw, 3.3rem);
+        line-height: 1.05;
+        font-weight: 900;
+        margin-bottom: 14px;
+        letter-spacing: -0.04em;
+    }
+
+    .hz-hero p {
+        color: #E1E8ED;
+        font-size: 1rem;
+        line-height: 1.8;
+        max-width: 760px;
+        margin-bottom: 0px;
+    }
+
+    .hz-card {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(10,38,71,0.92),
+                rgba(5,15,25,0.94)
+            );
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 22px;
+        padding: 24px;
+        margin-bottom: 22px;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+    }
+
+    .hz-card-title {
+        color: #FFFFFF;
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin-bottom: 18px;
+    }
+
+    .hz-kpi {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(10,38,71,0.92),
+                rgba(5,15,25,0.94)
+            );
+        border-left: 5px solid #00ED64;
+        border-radius: 20px;
+        padding: 22px;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+    }
+
+    .hz-kpi-label {
+        color: #C9D5DF;
+        font-size: 0.92rem;
+        margin-bottom: 10px;
+    }
+
+    .hz-kpi-value {
+        color: #FFFFFF;
+        font-size: 2.2rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
 # SESSÃO
 # ============================================================
 
@@ -52,8 +154,8 @@ if perfil_usuario != "admin":
     st.error("⛔ Esta área é restrita a administradores.")
 
     st.info(
-        "Seu perfil atual não possui permissão para acessar "
-        "a central administrativa da plataforma."
+        "Seu perfil atual não possui permissão "
+        "para acessar a central administrativa."
     )
 
     st.stop()
@@ -82,12 +184,13 @@ if st.sidebar.button(
 
 
 # ============================================================
-# HEADER
+# HERO
 # ============================================================
 
 st.markdown(
     """
     <div class="hz-hero">
+
         <span class="hz-kicker">
             Horizonte Health Intelligence
         </span>
@@ -100,6 +203,7 @@ st.markdown(
             Gerencie acessos, perfis, verificações,
             permissões e segurança da plataforma.
         </p>
+
     </div>
     """,
     unsafe_allow_html=True
@@ -118,7 +222,7 @@ if not usuarios:
 
 
 # ============================================================
-# TABELA DE USUÁRIOS
+# DATAFRAME
 # ============================================================
 
 linhas = []
@@ -142,14 +246,6 @@ for login, dados in usuarios.items():
     })
 
 df_usuarios = pd.DataFrame(linhas)
-
-st.markdown("## 👥 Usuários cadastrados")
-
-st.dataframe(
-    df_usuarios,
-    use_container_width=True,
-    height=420
-)
 
 
 # ============================================================
@@ -178,10 +274,82 @@ usuarios_nao_verificados = len(
 
 k1, k2, k3, k4 = st.columns(4)
 
-k1.metric("Total de usuários", total_usuarios)
-k2.metric("Administradores", usuarios_admin)
-k3.metric("Bloqueados", usuarios_bloqueados)
-k4.metric("Não verificados", usuarios_nao_verificados)
+with k1:
+    st.markdown(
+        f"""
+        <div class="hz-kpi">
+            <div class="hz-kpi-label">
+                Total de usuários
+            </div>
+
+            <div class="hz-kpi-value">
+                {total_usuarios}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with k2:
+    st.markdown(
+        f"""
+        <div class="hz-kpi">
+            <div class="hz-kpi-label">
+                Administradores
+            </div>
+
+            <div class="hz-kpi-value">
+                {usuarios_admin}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with k3:
+    st.markdown(
+        f"""
+        <div class="hz-kpi">
+            <div class="hz-kpi-label">
+                Bloqueados
+            </div>
+
+            <div class="hz-kpi-value">
+                {usuarios_bloqueados}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with k4:
+    st.markdown(
+        f"""
+        <div class="hz-kpi">
+            <div class="hz-kpi-label">
+                Não verificados
+            </div>
+
+            <div class="hz-kpi-value">
+                {usuarios_nao_verificados}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ============================================================
+# TABELA
+# ============================================================
+
+st.markdown("## 👥 Usuários cadastrados")
+
+st.dataframe(
+    df_usuarios,
+    use_container_width=True,
+    height=420
+)
 
 
 # ============================================================
@@ -262,16 +430,12 @@ with col2:
 
     nova_senha = st.text_input(
         "Nova senha manual",
-        type="password",
-        help=(
-            "Preencha apenas se quiser "
-            "alterar a senha."
-        )
+        type="password"
     )
 
 
 # ============================================================
-# BOTÕES DE AÇÃO
+# BOTÕES
 # ============================================================
 
 b1, b2, b3 = st.columns(3)
@@ -302,7 +466,7 @@ with b1:
             st.rerun()
         else:
             st.error(
-                "Não foi possível salvar o usuário."
+                "Não foi possível salvar."
             )
 
 with b2:
@@ -320,12 +484,12 @@ with b2:
 
         if ok:
             st.success(
-                "Usuário desbloqueado e verificado."
+                "Usuário desbloqueado."
             )
             st.rerun()
         else:
             st.error(
-                "Não foi possível atualizar o usuário."
+                "Não foi possível atualizar."
             )
 
 with b3:
@@ -339,21 +503,23 @@ with b3:
             )
 
             if ok:
-                st.success("Usuário excluído.")
+                st.success(
+                    "Usuário excluído."
+                )
                 st.rerun()
             else:
                 st.warning(
-                    "Este usuário não pôde ser excluído."
+                    "Não foi possível excluir."
                 )
     else:
         st.info(
             "Você não pode excluir "
-            "o próprio usuário logado."
+            "o próprio usuário."
         )
 
 
 # ============================================================
-# CRIAR USUÁRIO MANUAL
+# NOVO USUÁRIO
 # ============================================================
 
 st.markdown("---")
@@ -376,7 +542,7 @@ with st.form(
     )
 
     novo_perfil = st.selectbox(
-        "Perfil do novo usuário",
+        "Perfil",
         [
             "Admin",
             "Gestor",
@@ -439,12 +605,12 @@ with st.form(
 
             if ok:
                 st.success(
-                    "Usuário criado com sucesso."
+                    "Usuário criado."
                 )
                 st.rerun()
             else:
                 st.error(
-                    "Não foi possível criar o usuário."
+                    "Não foi possível criar."
                 )
 
 
@@ -469,10 +635,10 @@ st.download_button(
 
 
 # ============================================================
-# RODAPÉ
+# FOOTER
 # ============================================================
 
 st.caption(
     "Horizonte Health Intelligence • "
-    "Central Administrativa de Usuários"
+    "Central Administrativa"
 )
