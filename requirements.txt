@@ -6,3 +6,4 @@ dbfread
 reportlab
 pypdf
 openpyxl
+reportlab
