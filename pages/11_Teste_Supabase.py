@@ -16,6 +16,13 @@ exigir_login()
 aplicar_tema_streamlit(st)
 
 usuario = obter_usuario_atual()
+perfil = str(usuario.get("perfil", "")).strip().lower()
+
+if perfil != "admin":
+    st.error("⛔ Acesso restrito a administradores.")
+    st.info("Esta página é usada apenas para testes técnicos da conexão com o Supabase.")
+    st.stop()
+
 
 st.sidebar.markdown("## 👤 Sessão")
 st.sidebar.write(f"**Usuário:** {usuario.get('nome', '—')}")
