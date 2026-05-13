@@ -4,8 +4,18 @@ import pandas as pd
 
 from utils.leitor_dbf import ler_dbf_com_diagnostico, resumo_dbf
 from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
-from utils.auth import exigir_login, fazer_logout, obter_usuario_atual
+from utils.auth import (
+    exigir_login,
+    fazer_logout,
+    obter_usuario_atual,
+    carregar_usuarios,
+)
 from utils.auditoria_sinan import inferir_agravo, gerar_auditoria_sinan
+from utils.historico_uploads import (
+    registrar_upload,
+    historico_para_dataframe,
+    limpar_historico_uploads,
+)
 
 from mappings.acidente_trabalho_grave import aplicar_mapeamento, gerar_tabela_publica
 from mappings.violencia import aplicar_mapeamento_violencia, gerar_tabela_publica_violencia
@@ -13,7 +23,6 @@ from mappings.arbovirose import aplicar_mapeamento_arbovirose, gerar_tabela_publ
 from mappings.intoxicacao_exogena import aplicar_mapeamento_intoxicacao_exogena, gerar_tabela_publica_intoxicacao_exogena
 from mappings.leptospirose import aplicar_mapeamento_leptospirose, gerar_tabela_publica_leptospirose
 from mappings.toxoplasmose import aplicar_mapeamento_toxoplasmose, gerar_tabela_publica_toxoplasmose
-
 from mappings.generico_sinan import aplicar_mapeamento_generico, gerar_tabela_publica_generica
 
 from config.agravos import AGRAVOS
@@ -41,10 +50,13 @@ aplicar_tema_plotly()
 
 
 usuario = obter_usuario_atual()
+usuario_login = usuario.get("usuario", "desconhecido")
+perfil_usuario = str(usuario.get("perfil", "")).strip().lower()
+
 
 st.sidebar.markdown("## 👤 Sessão")
-st.sidebar.write(f"**Usuário:** {usuario['nome']}")
-st.sidebar.write(f"**Perfil:** {usuario['perfil']}")
+st.sidebar.write(f"**Usuário:** {usuario.get('nome', '—')}")
+st.sidebar.write(f"**Perfil:** {usuario.get('perfil', '—')}")
 
 if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
     fazer_logout()
@@ -58,7 +70,7 @@ st.markdown(
         <h1>Leitor Inteligente de Bancos DBF — SINAN</h1>
         <p>
             Upload, leitura inteligente, detecção automática do agravo,
-            auditoria de qualidade e acesso aos painéis analíticos.
+            auditoria de qualidade, histórico de uploads e acesso aos painéis analíticos.
         </p>
     </div>
     """,
@@ -218,6 +230,51 @@ auditoria = gerar_auditoria_sinan(
     df,
     agravo=agravo_confirmado
 )
+
+
+try:
+    usuarios = carregar_usuarios()
+except Exception:
+    usuarios = {}
+
+dados_usuario_logado = usuarios.get(usuario_login, {})
+
+municipio_usuario = (
+    dados_usuario_logado.get("municipio")
+    or dados_usuario_logado.get("instituicao")
+    or "Não informado"
+)
+
+chave_registro_upload = (
+    f"upload_registrado_"
+    f"{arquivo.name}_"
+    f"{agravo_confirmado}_"
+    f"{len(df)}_"
+    f"{usuario_login}"
+)
+
+if chave_registro_upload not in st.session_state:
+    ok_upload, registro_upload = registrar_upload(
+        nome_arquivo=arquivo.name,
+        agravo=agravo_confirmado,
+        usuario=usuario_login,
+        municipio=municipio_usuario,
+        score_qualidade=auditoria.get("score_banco", 0),
+        quantidade_registros=len(df),
+        quantidade_colunas=len(df.columns),
+        ficha_sugerida=ficha_sugerida,
+        confianca=confianca,
+    )
+
+    st.session_state[chave_registro_upload] = True
+    st.session_state["ultimo_registro_upload"] = registro_upload
+
+    if ok_upload:
+        try:
+            st.toast("Upload registrado no histórico.", icon="✅")
+        except Exception:
+            pass
+
 
 st.markdown("## 🧪 Auditoria de Qualidade do Banco")
 
@@ -454,6 +511,37 @@ if st.session_state.get("abrir_painel_generico", False):
         df,
         nome_agravo=agravo_confirmado
     )
+
+
+st.markdown("---")
+st.markdown("## 🕘 Histórico de uploads")
+
+df_historico = historico_para_dataframe()
+
+if df_historico.empty:
+    st.info("Ainda não há uploads registrados.")
+else:
+    st.dataframe(
+        df_historico.sort_values("data_upload", ascending=False),
+        use_container_width=True,
+        height=360
+    )
+
+    csv_historico = df_historico.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        "📥 Baixar histórico de uploads",
+        data=csv_historico,
+        file_name="historico_uploads_horizonte.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+    if perfil_usuario == "admin":
+        if st.button("🧹 Limpar histórico de uploads", use_container_width=True):
+            limpar_historico_uploads()
+            st.success("Histórico limpo com sucesso.")
+            st.rerun()
 
 
 st.caption("Horizonte Health Intelligence • Beta 1")
