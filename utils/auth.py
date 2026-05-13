@@ -34,7 +34,7 @@ USUARIOS_PADRAO = {
 
 
 # ============================================================
-# ARQUIVOS / PERSISTÊNCIA
+# PERSISTÊNCIA
 # ============================================================
 
 def garantir_pasta_data():
@@ -51,10 +51,7 @@ def carregar_usuarios_arquivo():
         with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
             dados = json.load(f)
 
-        if isinstance(dados, dict):
-            return dados
-
-        return {}
+        return dados if isinstance(dados, dict) else {}
 
     except Exception:
         return {}
@@ -97,11 +94,8 @@ def carregar_usuarios_secrets():
 def carregar_usuarios():
     usuarios = copy.deepcopy(USUARIOS_PADRAO)
 
-    usuarios_secrets = carregar_usuarios_secrets()
-    usuarios_arquivo = carregar_usuarios_arquivo()
-
-    usuarios.update(usuarios_secrets)
-    usuarios.update(usuarios_arquivo)
+    usuarios.update(carregar_usuarios_secrets())
+    usuarios.update(carregar_usuarios_arquivo())
 
     return usuarios
 
@@ -115,9 +109,7 @@ def salvar_usuario_runtime(usuario, dados):
     usuarios_arquivo = carregar_usuarios_arquivo()
     usuarios_arquivo[usuario] = dados
 
-    ok = salvar_usuarios_arquivo(usuarios_arquivo)
-
-    return ok
+    return salvar_usuarios_arquivo(usuarios_arquivo)
 
 
 def excluir_usuario_runtime(usuario):
@@ -158,6 +150,39 @@ def obter_usuario_atual():
         "nome": st.session_state.get("nome_usuario"),
         "perfil": st.session_state.get("perfil_usuario"),
     }
+
+
+def usuario_e_admin():
+    perfil = str(st.session_state.get("perfil_usuario", "")).strip().lower()
+    return perfil == "admin"
+
+
+# ============================================================
+# OCULTAR ADMIN NO MENU PARA NÃO ADM
+# ============================================================
+
+def ocultar_admin_para_nao_admin():
+    if usuario_e_admin():
+        return
+
+    st.markdown(
+        """
+        <style>
+        a[href*="Admin_Usuarios"],
+        a[href*="Admin%20Usuarios"],
+        a[href*="Admin-Usuarios"],
+        a[href*="9_Admin_Usuarios"],
+        a[href*="admin_usuarios"],
+        a[href*="admin-usuarios"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 # ============================================================
@@ -280,9 +305,9 @@ def css_login():
         background:
             linear-gradient(
                 90deg,
-                rgba(5, 15, 25, 0.96) 0%,
-                rgba(5, 15, 25, 0.84) 44%,
-                rgba(5, 15, 25, 0.50) 100%
+                rgba(5, 15, 25, 0.72) 0%,
+                rgba(5, 15, 25, 0.54) 45%,
+                rgba(5, 15, 25, 0.38) 100%
             ),
             url("data:image/png;base64,{fundo}");
         background-size: cover;
@@ -301,19 +326,20 @@ def css_login():
         f"""
         <style>
         [data-testid="stSidebar"],
-        [data-testid="collapsedControl"] {{
+        [data-testid="collapsedControl"],
+        header[data-testid="stHeader"] {{
             display: none !important;
             visibility: hidden !important;
             width: 0 !important;
-        }}
-
-        header[data-testid="stHeader"] {{
-            display: none !important;
+            height: 0 !important;
         }}
 
         .block-container {{
-            max-width: 100% !important;
-            padding: 0 !important;
+            max-width: 430px !important;
+            padding-top: 5vh !important;
+            padding-left: 18px !important;
+            padding-right: 18px !important;
+            margin: 0 auto !important;
         }}
 
         [data-testid="stAppViewContainer"] {{
@@ -321,55 +347,45 @@ def css_login():
             min-height: 100vh;
         }}
 
-        .hz-auth-page {{
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 34px 18px 36px 18px;
+        [data-testid="stImage"] {{
+            display: flex !important;
+            justify-content: center !important;
+            margin-bottom: 10px !important;
         }}
 
-        .hz-auth-wrap {{
-            width: min(100%, 440px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        [data-testid="stImage"] img {{
+            max-width: 250px !important;
+            width: 100% !important;
+            height: auto !important;
         }}
 
-        .hz-logo-top {{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 12px;
-        }}
-
-        .hz-auth-title {{
+        .hz-login-title {{
             text-align: center;
             color: #FFFFFF !important;
-            font-size: 1.38rem;
+            font-size: 1.25rem;
             line-height: 1.15;
             font-weight: 900;
             letter-spacing: -0.03em;
+            margin-top: 4px;
             margin-bottom: 8px;
         }}
 
-        .hz-auth-subtitle {{
+        .hz-login-subtitle {{
             text-align: center;
             color: #E1E8ED !important;
             line-height: 1.55;
             font-size: 0.94rem;
-            margin-bottom: 18px;
-            max-width: 420px;
+            margin-bottom: 20px;
         }}
 
-        .hz-auth-panel {{
-            width: 100%;
-            background: rgba(5, 15, 25, 0.42);
+        .hz-panel {{
+            background: rgba(5, 15, 25, 0.56);
             border: 1px solid rgba(225, 232, 237, 0.18);
             border-radius: 22px;
             padding: 22px;
             box-shadow: 0 28px 70px rgba(0,0,0,0.34);
             backdrop-filter: blur(14px);
+            margin-top: 8px;
         }}
 
         .hz-mini-title {{
@@ -388,7 +404,7 @@ def css_login():
             margin-bottom: 18px;
         }}
 
-        .hz-auth-divider {{
+        .hz-divider {{
             display: flex;
             align-items: center;
             gap: 12px;
@@ -397,8 +413,8 @@ def css_login():
             font-size: 0.86rem;
         }}
 
-        .hz-auth-divider:before,
-        .hz-auth-divider:after {{
+        .hz-divider:before,
+        .hz-divider:after {{
             content: "";
             flex: 1;
             height: 1px;
@@ -427,9 +443,15 @@ def css_login():
         }}
 
         input {{
-            background: rgba(248,250,252,0.97) !important;
-            color: #101820 !important;
+            background: rgba(8, 19, 31, 0.72) !important;
+            color: #F8FAFC !important;
+            border: 1px solid rgba(225, 232, 237, 0.25) !important;
             border-radius: 14px !important;
+            min-height: 46px !important;
+        }}
+
+        input::placeholder {{
+            color: #94A3B8 !important;
         }}
 
         label {{
@@ -462,17 +484,13 @@ def css_login():
         }}
 
         @media (max-width: 640px) {{
-            .hz-auth-page {{
-                align-items: flex-start;
-                padding-top: 24px;
+            .block-container {{
+                max-width: 100% !important;
+                padding-top: 24px !important;
             }}
 
-            .hz-auth-panel {{
-                padding: 18px;
-            }}
-
-            .hz-auth-title {{
-                font-size: 1.25rem;
+            [data-testid="stImage"] img {{
+                max-width: 210px !important;
             }}
         }}
         </style>
@@ -581,30 +599,27 @@ def tela_login():
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
 
-    st.markdown(
-        '<div class="hz-auth-page"><div class="hz-auth-wrap">',
-        unsafe_allow_html=True
-    )
-
-    st.markdown('<div class="hz-logo-top">', unsafe_allow_html=True)
     exibir_logo()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     tela = st.session_state["auth_tela"]
 
     if tela == "login":
         st.markdown(
-            '<div class="hz-auth-title">Horizonte Health Intelligence</div>',
+            '<div class="hz-login-title">Horizonte Health Intelligence</div>',
             unsafe_allow_html=True
         )
+
         st.markdown(
-            '<div class="hz-auth-subtitle">Plataforma segura para leitura de bancos DBF do SINAN, auditoria epidemiológica e apoio à decisão.</div>',
+            '<div class="hz-login-subtitle">Plataforma segura para leitura de bancos DBF do SINAN, auditoria epidemiológica e apoio à decisão.</div>',
             unsafe_allow_html=True
         )
 
         with st.form("form_login", clear_on_submit=False):
-            usuario = st.text_input("Usuário")
-            senha = st.text_input("Senha", type="password")
+            usuario = st.text_input("Usuário", placeholder="Usuário")
+            senha = st.text_input("Senha", type="password", placeholder="Senha")
+
+            lembrar = st.checkbox("Lembrar de mim", value=True)
+
             entrar = st.form_submit_button(
                 "Entrar",
                 use_container_width=True
@@ -617,7 +632,7 @@ def tela_login():
                     st.error("Usuário ou senha inválidos.")
 
         st.markdown(
-            '<div class="hz-auth-divider">ou</div>',
+            '<div class="hz-divider">ou</div>',
             unsafe_allow_html=True
         )
 
@@ -639,7 +654,7 @@ def tela_login():
         )
 
     elif tela == "cadastro":
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar conta</div>', unsafe_allow_html=True)
         st.markdown(
             '<div class="hz-mini-subtitle">Preencha seus dados. Enviaremos um código de 4 dígitos para validar seu e-mail.</div>',
@@ -653,6 +668,7 @@ def tela_login():
             senha = st.text_input("Senha", type="password")
             confirmar = st.text_input("Confirmar senha", type="password")
             aceite = st.checkbox("Li e aceito os termos de uso e política de privacidade")
+
             cadastrar = st.form_submit_button(
                 "Cadastrar",
                 use_container_width=True
@@ -690,7 +706,7 @@ def tela_login():
     elif tela == "verificar_cadastro":
         pendente = st.session_state.get("cadastro_pendente", {})
 
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Verifique seu e-mail</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="hz-mini-subtitle">Enviamos um código de 4 dígitos para <b>{pendente.get("email", "")}</b>.</div>',
@@ -699,10 +715,7 @@ def tela_login():
 
         exibir_codigo_teste("cadastro_pendente")
 
-        codigo = st.text_input(
-            "Código de verificação",
-            max_chars=4
-        )
+        codigo = st.text_input("Código de verificação", max_chars=4)
 
         if st.button("Verificar código", use_container_width=True):
             if codigo == pendente.get("codigo"):
@@ -740,7 +753,7 @@ def tela_login():
         st.markdown('</div>', unsafe_allow_html=True)
 
     elif tela == "cadastro_sucesso":
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-success-icon">✓</div>', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Conta verificada!</div>', unsafe_allow_html=True)
         st.markdown(
@@ -755,7 +768,7 @@ def tela_login():
         st.markdown('</div>', unsafe_allow_html=True)
 
     elif tela == "redefinir_email":
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Redefinir senha</div>', unsafe_allow_html=True)
         st.markdown(
             '<div class="hz-mini-subtitle">Informe seu usuário. Enviaremos um código de 4 dígitos para o e-mail cadastrado.</div>',
@@ -764,6 +777,7 @@ def tela_login():
 
         with st.form("form_redefinir_email", clear_on_submit=False):
             usuario = st.text_input("Usuário")
+
             enviar = st.form_submit_button(
                 "Enviar código",
                 use_container_width=True
@@ -782,7 +796,7 @@ def tela_login():
     elif tela == "verificar_redefinicao":
         pendente = st.session_state.get("redefinicao_pendente", {})
 
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Verifique seu e-mail</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="hz-mini-subtitle">Enviamos um código de 4 dígitos para <b>{pendente.get("email", "")}</b>.</div>',
@@ -791,10 +805,7 @@ def tela_login():
 
         exibir_codigo_teste("redefinicao_pendente")
 
-        codigo = st.text_input(
-            "Código de verificação",
-            max_chars=4
-        )
+        codigo = st.text_input("Código de verificação", max_chars=4)
 
         if st.button("Verificar código", use_container_width=True):
             if codigo == pendente.get("codigo"):
@@ -816,7 +827,7 @@ def tela_login():
     elif tela == "nova_senha":
         pendente = st.session_state.get("redefinicao_pendente", {})
 
-        st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar nova senha</div>', unsafe_allow_html=True)
         st.markdown(
             '<div class="hz-mini-subtitle">Defina uma nova senha para sua conta.</div>',
@@ -826,6 +837,7 @@ def tela_login():
         with st.form("form_nova_senha", clear_on_submit=False):
             nova = st.text_input("Nova senha", type="password")
             confirmar = st.text_input("Confirmar nova senha", type="password")
+
             salvar = st.form_submit_button(
                 "Redefinir senha",
                 use_container_width=True
@@ -843,10 +855,7 @@ def tela_login():
                     dados["senha"] = nova
                     dados["verificado"] = True
 
-                    salvar_usuario_runtime(
-                        usuario,
-                        dados
-                    )
+                    salvar_usuario_runtime(usuario, dados)
 
                     st.session_state.pop("redefinicao_pendente", None)
                     st.success("Senha redefinida com sucesso.")
@@ -859,10 +868,10 @@ def tela_login():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div></div>', unsafe_allow_html=True)
-
 
 def exigir_login():
     if not usuario_logado():
         tela_login()
         st.stop()
+
+    ocultar_admin_para_nao_admin()
