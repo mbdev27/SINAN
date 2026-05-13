@@ -9,6 +9,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -128,11 +129,19 @@ def adicionar_logo(elementos):
     for caminho in caminhos:
         if caminho.exists():
             try:
-                logo = Image(str(caminho), width=5.2 * cm, height=2.2 * cm)
+                logo = Image(
+                    str(caminho),
+                    width=5.2 * cm,
+                    height=2.2 * cm
+                )
+
                 logo.hAlign = "CENTER"
+
                 elementos.append(logo)
                 elementos.append(Spacer(1, 0.4 * cm))
+
                 return
+
             except Exception:
                 return
 
@@ -143,7 +152,10 @@ def rodape(canvas, doc):
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor(CORES_PDF["muted"]))
 
-    texto = f"Horizonte Health Intelligence - Relatório Técnico - Página {doc.page}"
+    texto = (
+        f"Horizonte Health Intelligence - "
+        f"Relatório Técnico - Página {doc.page}"
+    )
 
     canvas.drawCentredString(
         A4[0] / 2,
@@ -159,6 +171,7 @@ def limitar_dataframe(df, linhas=20, colunas=6):
         return pd.DataFrame()
 
     df_temp = df.copy()
+
     df_temp = df_temp.iloc[:linhas, :colunas]
 
     for coluna in df_temp.columns:
@@ -167,15 +180,28 @@ def limitar_dataframe(df, linhas=20, colunas=6):
     return df_temp
 
 
-def dataframe_para_tabela(df, linhas=20, colunas=6, largura_total=17 * cm):
-    df = limitar_dataframe(df, linhas=linhas, colunas=colunas)
+def dataframe_para_tabela(
+    df,
+    linhas=20,
+    colunas=6,
+    largura_total=17 * cm
+):
+    df = limitar_dataframe(
+        df,
+        linhas=linhas,
+        colunas=colunas
+    )
 
     if df.empty:
-        return Paragraph("Sem dados disponíveis para esta seção.", estilo_normal())
+        return Paragraph(
+            "Sem dados disponíveis para esta seção.",
+            estilo_normal()
+        )
 
     dados = [list(df.columns)] + df.astype(str).values.tolist()
 
     qtd_colunas = len(dados[0])
+
     largura_coluna = largura_total / max(qtd_colunas, 1)
 
     tabela = Table(
@@ -199,7 +225,17 @@ def dataframe_para_tabela(df, linhas=20, colunas=6, largura_total=17 * cm):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
 
             ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D6DEE6")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+
+            (
+                "ROWBACKGROUNDS",
+                (0, 1),
+                (-1, -1),
+                [
+                    colors.white,
+                    colors.HexColor("#F8FAFC")
+                ]
+            ),
+
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),
             ("TOPPADDING", (0, 0), (-1, -1), 5),
@@ -217,8 +253,13 @@ def tabela_kpis(kpis):
     linha_valores = []
 
     for item in kpis:
-        linha_rotulos.append(limpar_texto(item.get("label", "")))
-        linha_valores.append(limpar_texto(item.get("value", "")))
+        linha_rotulos.append(
+            limpar_texto(item.get("label", ""))
+        )
+
+        linha_valores.append(
+            limpar_texto(item.get("value", ""))
+        )
 
     dados.append(linha_rotulos)
     dados.append(linha_valores)
@@ -242,7 +283,9 @@ def tabela_kpis(kpis):
             ("FONTSIZE", (0, 1), (-1, 1), 12),
 
             ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D6DEE6")),
+
             ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor(CORES_PDF["emerald"])),
+
             ("TOPPADDING", (0, 0), (-1, -1), 8),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ])
@@ -252,16 +295,31 @@ def tabela_kpis(kpis):
 
 
 def tabela_alertas_resumo(alertas_df):
-    if alertas_df is None or not isinstance(alertas_df, pd.DataFrame) or alertas_df.empty:
-        return Paragraph("Nenhum alerta automático informado.", estilo_normal())
+    if (
+        alertas_df is None
+        or not isinstance(alertas_df, pd.DataFrame)
+        or alertas_df.empty
+    ):
+        return Paragraph(
+            "Nenhum alerta automático informado.",
+            estilo_normal()
+        )
 
     colunas = [
-        c for c in ["Nível", "Tipo", "Título", "Recomendação"]
+        c for c in [
+            "Nível",
+            "Tipo",
+            "Título",
+            "Recomendação"
+        ]
         if c in alertas_df.columns
     ]
 
     if not colunas:
-        return Paragraph("Nenhum alerta automático informado.", estilo_normal())
+        return Paragraph(
+            "Nenhum alerta automático informado.",
+            estilo_normal()
+        )
 
     df = alertas_df[colunas].head(8).copy()
 
@@ -314,14 +372,17 @@ def gerar_resumo_executivo_pdf(
 
     elementos.append(
         Paragraph(
-            f"{limpar_texto(nome_agravo)}",
+            limpar_texto(nome_agravo),
             estilo_subtitulo()
         )
     )
 
     elementos.append(
         Paragraph(
-            f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}",
+            (
+                f"Gerado em "
+                f"{datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}"
+            ),
             estilo_normal()
         )
     )
@@ -335,7 +396,10 @@ def gerar_resumo_executivo_pdf(
 
     elementos.append(
         Paragraph(
-            f"Município/Instituição: <b>{limpar_texto(municipio)}</b>",
+            (
+                f"Município/Instituição: "
+                f"<b>{limpar_texto(municipio)}</b>"
+            ),
             estilo_normal()
         )
     )
@@ -352,20 +416,38 @@ def gerar_resumo_executivo_pdf(
     elementos.append(tabela_kpis(kpis))
     elementos.append(Spacer(1, 0.45 * cm))
 
-    elementos.append(Paragraph("Síntese executiva", estilo_secao()))
-
-    texto_sintese = (
-        f"O banco analisado corresponde ao agravo <b>{limpar_texto(nome_agravo)}</b>. "
-        f"Foram identificados <b>{total_registros}</b> registros distribuídos em "
-        f"<b>{total_colunas}</b> colunas. O score de qualidade foi de "
-        f"<b>{score_qualidade}%</b>, classificado como "
-        f"<b>{limpar_texto(classificacao_qualidade)}</b>. "
-        f"Foram identificadas <b>{duplicidades}</b> duplicidades prováveis no recorte avaliado."
+    elementos.append(
+        Paragraph(
+            "Síntese executiva",
+            estilo_secao()
+        )
     )
 
-    elementos.append(Paragraph(texto_sintese, estilo_normal()))
+    texto_sintese = (
+        f"O banco analisado corresponde ao agravo "
+        f"<b>{limpar_texto(nome_agravo)}</b>. "
+        f"Foram identificados <b>{total_registros}</b> registros "
+        f"distribuídos em <b>{total_colunas}</b> colunas. "
+        f"O score de qualidade foi de "
+        f"<b>{score_qualidade}%</b>, classificado como "
+        f"<b>{limpar_texto(classificacao_qualidade)}</b>. "
+        f"Foram identificadas <b>{duplicidades}</b> "
+        f"duplicidades prováveis."
+    )
 
-    elementos.append(Paragraph("Colunas estratégicas identificadas", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            texto_sintese,
+            estilo_normal()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "Colunas estratégicas identificadas",
+            estilo_secao()
+        )
+    )
 
     dados_colunas = pd.DataFrame([
         {
@@ -382,14 +464,35 @@ def gerar_resumo_executivo_pdf(
         },
     ])
 
-    elementos.append(dataframe_para_tabela(dados_colunas, linhas=3, colunas=2))
+    elementos.append(
+        dataframe_para_tabela(
+            dados_colunas,
+            linhas=3,
+            colunas=2
+        )
+    )
+
     elementos.append(Spacer(1, 0.35 * cm))
 
-    elementos.append(Paragraph("Principais alertas inteligentes", estilo_secao()))
-    elementos.append(tabela_alertas_resumo(alertas_df))
+    elementos.append(
+        Paragraph(
+            "Principais alertas inteligentes",
+            estilo_secao()
+        )
+    )
+
+    elementos.append(
+        tabela_alertas_resumo(alertas_df)
+    )
+
     elementos.append(Spacer(1, 0.35 * cm))
 
-    elementos.append(Paragraph("Recomendações automáticas", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "Recomendações automáticas",
+            estilo_secao()
+        )
+    )
 
     if observacoes:
         for item in observacoes[:8]:
@@ -402,20 +505,30 @@ def gerar_resumo_executivo_pdf(
     else:
         elementos.append(
             Paragraph(
-                "Manter rotina de monitoramento, auditoria e qualificação periódica dos bancos.",
+                (
+                    "Manter rotina de monitoramento, "
+                    "auditoria e qualificação periódica."
+                ),
                 estilo_normal()
             )
         )
 
     elementos.append(Spacer(1, 0.4 * cm))
 
-    elementos.append(Paragraph("Uso recomendado", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "Uso recomendado",
+            estilo_secao()
+        )
+    )
 
     elementos.append(
         Paragraph(
-            "Este resumo foi elaborado para apoio rápido em reuniões técnicas, "
-            "discussões de gestão, pactuações internas e priorização de ações. "
-            "Para análise detalhada, recomenda-se utilizar também o Relatório Técnico completo.",
+            (
+                "Este resumo foi elaborado para apoio rápido "
+                "em reuniões técnicas, discussões de gestão, "
+                "pactuações internas e priorização de ações."
+            ),
             estilo_normal()
         )
     )
@@ -474,28 +587,37 @@ def gerar_relatorio_tecnico_pdf(
 
     elementos.append(
         Paragraph(
-            f"{limpar_texto(nome_agravo)}",
+            limpar_texto(nome_agravo),
             estilo_subtitulo()
         )
     )
 
     elementos.append(
         Paragraph(
-            f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}",
+            (
+                f"Gerado em "
+                f"{datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}"
+            ),
             estilo_normal()
         )
     )
 
     elementos.append(
         Paragraph(
-            f"Usuário responsável: <b>{limpar_texto(usuario)}</b>",
+            (
+                f"Usuário responsável: "
+                f"<b>{limpar_texto(usuario)}</b>"
+            ),
             estilo_normal()
         )
     )
 
     elementos.append(
         Paragraph(
-            f"Município/Instituição: <b>{limpar_texto(municipio)}</b>",
+            (
+                f"Município/Instituição: "
+                f"<b>{limpar_texto(municipio)}</b>"
+            ),
             estilo_normal()
         )
     )
@@ -512,19 +634,36 @@ def gerar_relatorio_tecnico_pdf(
     elementos.append(tabela_kpis(kpis))
     elementos.append(Spacer(1, 0.5 * cm))
 
-    elementos.append(Paragraph("1. Síntese técnica", estilo_secao()))
-
-    texto_sintese = (
-        f"O banco analisado corresponde ao agravo {limpar_texto(nome_agravo)}. "
-        f"Foram identificados {total_registros} registros e {total_colunas} colunas. "
-        f"O score geral de qualidade foi de {score_qualidade}%, classificado como "
-        f"{limpar_texto(classificacao_qualidade)}. "
-        f"Foram detectadas {duplicidades} duplicidades prováveis no recorte analisado."
+    elementos.append(
+        Paragraph(
+            "1. Síntese técnica",
+            estilo_secao()
+        )
     )
 
-    elementos.append(Paragraph(texto_sintese, estilo_normal()))
+    texto_sintese = (
+        f"O banco analisado corresponde ao agravo "
+        f"{limpar_texto(nome_agravo)}. "
+        f"Foram identificados {total_registros} registros "
+        f"e {total_colunas} colunas. "
+        f"O score geral de qualidade foi de "
+        f"{score_qualidade}%, classificado como "
+        f"{limpar_texto(classificacao_qualidade)}."
+    )
 
-    elementos.append(Paragraph("2. Colunas estruturantes identificadas", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            texto_sintese,
+            estilo_normal()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            "2. Colunas estruturantes identificadas",
+            estilo_secao()
+        )
+    )
 
     dados_colunas = pd.DataFrame([
         {
@@ -541,11 +680,23 @@ def gerar_relatorio_tecnico_pdf(
         },
     ])
 
-    elementos.append(dataframe_para_tabela(dados_colunas, linhas=3, colunas=2))
+    elementos.append(
+        dataframe_para_tabela(
+            dados_colunas,
+            linhas=3,
+            colunas=2
+        )
+    )
+
     elementos.append(Spacer(1, 0.3 * cm))
 
     if resumo_extra:
-        elementos.append(Paragraph("3. Observações automáticas", estilo_secao()))
+        elementos.append(
+            Paragraph(
+                "3. Observações automáticas",
+                estilo_secao()
+            )
+        )
 
         for item in resumo_extra:
             elementos.append(
@@ -557,48 +708,126 @@ def gerar_relatorio_tecnico_pdf(
 
     elementos.append(PageBreak())
 
-    elementos.append(Paragraph("4. Qualidade dos campos", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "4. Qualidade dos campos",
+            estilo_secao()
+        )
+    )
 
-    if estrutura_campos is not None and isinstance(estrutura_campos, pd.DataFrame):
-        elementos.append(dataframe_para_tabela(estrutura_campos, linhas=25, colunas=5))
+    if (
+        estrutura_campos is not None
+        and isinstance(estrutura_campos, pd.DataFrame)
+    ):
+        elementos.append(
+            dataframe_para_tabela(
+                estrutura_campos,
+                linhas=25,
+                colunas=5
+            )
+        )
     else:
-        elementos.append(Paragraph("Sem estrutura de campos disponível.", estilo_normal()))
+        elementos.append(
+            Paragraph(
+                "Sem estrutura de campos disponível.",
+                estilo_normal()
+            )
+        )
 
     elementos.append(Spacer(1, 0.4 * cm))
 
-    elementos.append(Paragraph("5. Colunas com maior incompletude", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "5. Colunas com maior incompletude",
+            estilo_secao()
+        )
+    )
 
-    if colunas_vazias is not None and isinstance(colunas_vazias, pd.DataFrame):
-        elementos.append(dataframe_para_tabela(colunas_vazias, linhas=25, colunas=4))
+    if (
+        colunas_vazias is not None
+        and isinstance(colunas_vazias, pd.DataFrame)
+    ):
+        elementos.append(
+            dataframe_para_tabela(
+                colunas_vazias,
+                linhas=25,
+                colunas=4
+            )
+        )
     else:
-        elementos.append(Paragraph("Sem tabela de colunas vazias disponível.", estilo_normal()))
+        elementos.append(
+            Paragraph(
+                "Sem tabela de colunas vazias disponível.",
+                estilo_normal()
+            )
+        )
 
     elementos.append(PageBreak())
 
-    elementos.append(Paragraph("6. Inconsistências e alertas", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "6. Inconsistências e alertas",
+            estilo_secao()
+        )
+    )
 
     if inconsistencias:
         for titulo, tabela in inconsistencias.items():
-            elementos.append(Paragraph(limpar_texto(titulo), estilo_secao()))
 
-            if isinstance(tabela, pd.DataFrame) and not tabela.empty:
-                elementos.append(dataframe_para_tabela(tabela, linhas=12, colunas=6))
+            elementos.append(
+                Paragraph(
+                    limpar_texto(titulo),
+                    estilo_secao()
+                )
+            )
+
+            if (
+                isinstance(tabela, pd.DataFrame)
+                and not tabela.empty
+            ):
+                elementos.append(
+                    dataframe_para_tabela(
+                        tabela,
+                        linhas=12,
+                        colunas=6
+                    )
+                )
             else:
-                elementos.append(Paragraph("Nenhum registro encontrado.", estilo_normal()))
+                elementos.append(
+                    Paragraph(
+                        "Nenhum registro encontrado.",
+                        estilo_normal()
+                    )
+                )
 
             elementos.append(Spacer(1, 0.3 * cm))
+
     else:
-        elementos.append(Paragraph("Não foram informadas inconsistências detalhadas.", estilo_normal()))
+        elementos.append(
+            Paragraph(
+                "Não foram informadas inconsistências detalhadas.",
+                estilo_normal()
+            )
+        )
 
     elementos.append(Spacer(1, 0.5 * cm))
 
-    elementos.append(Paragraph("7. Considerações finais", estilo_secao()))
+    elementos.append(
+        Paragraph(
+            "7. Considerações finais",
+            estilo_secao()
+        )
+    )
 
     elementos.append(
         Paragraph(
-            "Este relatório foi gerado automaticamente pela plataforma Horizonte Health Intelligence. "
-            "Os resultados devem ser utilizados como apoio técnico para qualificação da informação, "
-            "monitoramento epidemiológico, planejamento de ações e discussão institucional.",
+            (
+                "Este relatório foi gerado automaticamente "
+                "pela plataforma Horizonte Health Intelligence. "
+                "Os resultados devem ser utilizados como apoio "
+                "técnico para qualificação da informação, "
+                "monitoramento epidemiológico e planejamento."
+            ),
             estilo_normal()
         )
     )
