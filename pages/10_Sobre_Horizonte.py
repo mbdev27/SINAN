@@ -22,12 +22,6 @@ nome_usuario = usuario.get("nome", usuario.get("usuario", "Usuário"))
 st.markdown(
     dedent("""
     <style>
-    .hz-page {
-        max-width: 1450px;
-        margin: auto;
-        padding-bottom: 4rem;
-    }
-
     .sobre-hero {
         border-radius: 34px;
         padding: 4.5rem 4rem;
@@ -208,8 +202,6 @@ st.markdown(
 )
 
 
-st.markdown('<div class="hz-page">', unsafe_allow_html=True)
-
 st.markdown(
     dedent("""
     <section class="sobre-hero">
@@ -386,5 +378,3 @@ st.markdown(
     """),
     unsafe_allow_html=True
 )
-
-st.markdown("</div>", unsafe_allow_html=True)
