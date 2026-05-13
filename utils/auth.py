@@ -1,4 +1,6 @@
 import base64
+import copy
+import json
 import random
 import smtplib
 import ssl
@@ -8,6 +10,9 @@ from pathlib import Path
 import streamlit as st
 
 
+ARQUIVO_USUARIOS = Path("data/usuarios.json")
+
+
 USUARIOS_PADRAO = {
     "admin": {
         "senha": "admin123",
@@ -15,6 +20,7 @@ USUARIOS_PADRAO = {
         "perfil": "Admin",
         "email": "admin@horizonte.local",
         "verificado": True,
+        "bloqueado": False,
     },
     "demo": {
         "senha": "demo123",
@@ -22,9 +28,113 @@ USUARIOS_PADRAO = {
         "perfil": "Demo",
         "email": "demo@horizonte.local",
         "verificado": True,
+        "bloqueado": False,
     },
 }
 
+
+# ============================================================
+# ARQUIVOS / PERSISTÊNCIA
+# ============================================================
+
+def garantir_pasta_data():
+    ARQUIVO_USUARIOS.parent.mkdir(parents=True, exist_ok=True)
+
+
+def carregar_usuarios_arquivo():
+    garantir_pasta_data()
+
+    if not ARQUIVO_USUARIOS.exists():
+        return {}
+
+    try:
+        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        if isinstance(dados, dict):
+            return dados
+
+        return {}
+
+    except Exception:
+        return {}
+
+
+def salvar_usuarios_arquivo(usuarios):
+    garantir_pasta_data()
+
+    try:
+        with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
+            json.dump(
+                usuarios,
+                f,
+                ensure_ascii=False,
+                indent=4
+            )
+
+        return True
+
+    except Exception:
+        return False
+
+
+def carregar_usuarios_secrets():
+    try:
+        if "usuarios" not in st.secrets:
+            return {}
+
+        usuarios = {}
+
+        for usuario, dados in st.secrets["usuarios"].items():
+            usuarios[usuario] = dict(dados)
+
+        return usuarios
+
+    except Exception:
+        return {}
+
+
+def carregar_usuarios():
+    usuarios = copy.deepcopy(USUARIOS_PADRAO)
+
+    usuarios_secrets = carregar_usuarios_secrets()
+    usuarios_arquivo = carregar_usuarios_arquivo()
+
+    usuarios.update(usuarios_secrets)
+    usuarios.update(usuarios_arquivo)
+
+    return usuarios
+
+
+def salvar_usuario_runtime(usuario, dados):
+    usuario = str(usuario).strip()
+
+    if not usuario:
+        return False
+
+    usuarios_arquivo = carregar_usuarios_arquivo()
+    usuarios_arquivo[usuario] = dados
+
+    ok = salvar_usuarios_arquivo(usuarios_arquivo)
+
+    return ok
+
+
+def excluir_usuario_runtime(usuario):
+    usuario = str(usuario).strip()
+
+    usuarios_arquivo = carregar_usuarios_arquivo()
+
+    if usuario in usuarios_arquivo:
+        usuarios_arquivo.pop(usuario, None)
+        return salvar_usuarios_arquivo(usuarios_arquivo)
+
+    return False
+
+
+# ============================================================
+# UTILITÁRIOS
+# ============================================================
 
 def imagem_base64(caminho):
     try:
@@ -36,31 +146,6 @@ def imagem_base64(caminho):
 
 def gerar_codigo():
     return str(random.randint(1000, 9999))
-
-
-def carregar_usuarios():
-    if "usuarios_runtime" not in st.session_state:
-        st.session_state["usuarios_runtime"] = USUARIOS_PADRAO.copy()
-
-    try:
-        if "usuarios" in st.secrets:
-            usuarios = {}
-            for usuario, dados in st.secrets["usuarios"].items():
-                usuarios[usuario] = dict(dados)
-
-            usuarios.update(st.session_state["usuarios_runtime"])
-            return usuarios
-    except Exception:
-        pass
-
-    return st.session_state["usuarios_runtime"]
-
-
-def salvar_usuario_runtime(usuario, dados):
-    if "usuarios_runtime" not in st.session_state:
-        st.session_state["usuarios_runtime"] = USUARIOS_PADRAO.copy()
-
-    st.session_state["usuarios_runtime"][usuario] = dados
 
 
 def usuario_logado():
@@ -75,22 +160,11 @@ def obter_usuario_atual():
     }
 
 
+# ============================================================
+# E-MAIL
+# ============================================================
+
 def enviar_email_codigo(destinatario, codigo, assunto):
-    """
-    Envia e-mail real se houver SMTP configurado em st.secrets.
-
-    Exemplo em .streamlit/secrets.toml:
-
-    [smtp]
-    host = "smtp.gmail.com"
-    port = 465
-    user = "seuemail@gmail.com"
-    password = "senha_de_app"
-    sender = "Horizonte <seuemail@gmail.com>"
-
-    Sem SMTP configurado, o sistema usa modo demonstração.
-    """
-
     try:
         smtp = st.secrets.get("smtp", None)
 
@@ -121,7 +195,10 @@ Caso você não tenha solicitado este acesso, ignore esta mensagem.
             int(smtp.get("port", 465)),
             context=contexto
         ) as server:
-            server.login(smtp["user"], smtp["password"])
+            server.login(
+                smtp["user"],
+                smtp["password"]
+            )
             server.send_message(msg)
 
         return True
@@ -130,12 +207,20 @@ Caso você não tenha solicitado este acesso, ignore esta mensagem.
         return False
 
 
+# ============================================================
+# LOGIN / LOGOUT
+# ============================================================
+
 def fazer_login(usuario, senha):
     usuarios = carregar_usuarios()
     usuario = str(usuario).strip()
 
     if usuario in usuarios:
         dados = usuarios[usuario]
+
+        if dados.get("bloqueado", False):
+            st.error("Este usuário está bloqueado. Procure o administrador.")
+            return False
 
         if not dados.get("verificado", False):
             st.error("Este usuário ainda não concluiu a verificação por e-mail.")
@@ -175,6 +260,10 @@ def fazer_logout():
             del st.session_state[chave]
 
 
+# ============================================================
+# CSS LOGIN
+# ============================================================
+
 def css_login():
     fundo = None
 
@@ -186,13 +275,13 @@ def css_login():
             fundo = imagem_base64(caminho)
             break
 
-    background_css = (
-        f"""
+    if fundo:
+        background_css = f"""
         background:
             linear-gradient(
                 90deg,
                 rgba(5, 15, 25, 0.96) 0%,
-                rgba(5, 15, 25, 0.84) 42%,
+                rgba(5, 15, 25, 0.84) 44%,
                 rgba(5, 15, 25, 0.50) 100%
             ),
             url("data:image/png;base64,{fundo}");
@@ -200,14 +289,13 @@ def css_login():
         background-position: center;
         background-attachment: fixed;
         """
-        if fundo
-        else """
+    else:
+        background_css = """
         background:
             radial-gradient(circle at 20% 20%, rgba(0,237,100,0.16), transparent 34%),
             radial-gradient(circle at 80% 70%, rgba(0,237,100,0.10), transparent 30%),
             linear-gradient(135deg, #050F19 0%, #0A2647 58%, #064E3B 100%);
         """
-    )
 
     st.markdown(
         f"""
@@ -238,11 +326,11 @@ def css_login():
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding: 44px 18px 36px 18px;
+            padding: 34px 18px 36px 18px;
         }}
 
         .hz-auth-wrap {{
-            width: min(100%, 460px);
+            width: min(100%, 440px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -252,13 +340,13 @@ def css_login():
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }}
 
         .hz-auth-title {{
             text-align: center;
             color: #FFFFFF !important;
-            font-size: 1.45rem;
+            font-size: 1.38rem;
             line-height: 1.15;
             font-weight: 900;
             letter-spacing: -0.03em;
@@ -269,8 +357,8 @@ def css_login():
             text-align: center;
             color: #E1E8ED !important;
             line-height: 1.55;
-            font-size: 0.96rem;
-            margin-bottom: 20px;
+            font-size: 0.94rem;
+            margin-bottom: 18px;
             max-width: 420px;
         }}
 
@@ -338,26 +426,6 @@ def css_login():
             font-weight: 900;
         }}
 
-        .hz-code-grid {{
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin: 14px 0 18px 0;
-        }}
-
-        .hz-code-box {{
-            border: 1px solid rgba(0,237,100,0.45);
-            background: rgba(8,19,31,0.64);
-            color: #FFFFFF !important;
-            border-radius: 12px;
-            min-height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.55rem;
-            font-weight: 800;
-        }}
-
         input {{
             background: rgba(248,250,252,0.97) !important;
             color: #101820 !important;
@@ -413,6 +481,10 @@ def css_login():
     )
 
 
+# ============================================================
+# LOGO
+# ============================================================
+
 def exibir_logo():
     for caminho in [
         "assets/horizonte_logo.png",
@@ -438,6 +510,10 @@ def exibir_logo():
         unsafe_allow_html=True
     )
 
+
+# ============================================================
+# FLUXOS DE VERIFICAÇÃO
+# ============================================================
 
 def iniciar_verificacao_cadastro(nome, email, usuario, senha):
     codigo = gerar_codigo()
@@ -487,12 +563,17 @@ def iniciar_redefinicao(usuario):
     st.session_state["auth_tela"] = "verificar_redefinicao"
 
 
-def exibir_codigo_demo(chave):
+def exibir_codigo_teste(chave):
     if not st.session_state.get("email_enviado_real", False):
         codigo = st.session_state.get(chave, {}).get("codigo")
+
         if codigo:
             st.info(f"Modo teste: código de verificação **{codigo}**")
 
+
+# ============================================================
+# TELAS
+# ============================================================
 
 def tela_login():
     css_login()
@@ -500,7 +581,10 @@ def tela_login():
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
 
-    st.markdown('<div class="hz-auth-page"><div class="hz-auth-wrap">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hz-auth-page"><div class="hz-auth-wrap">',
+        unsafe_allow_html=True
+    )
 
     st.markdown('<div class="hz-logo-top">', unsafe_allow_html=True)
     exibir_logo()
@@ -509,7 +593,10 @@ def tela_login():
     tela = st.session_state["auth_tela"]
 
     if tela == "login":
-        st.markdown('<div class="hz-auth-title">Horizonte Health Intelligence</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="hz-auth-title">Horizonte Health Intelligence</div>',
+            unsafe_allow_html=True
+        )
         st.markdown(
             '<div class="hz-auth-subtitle">Plataforma segura para leitura de bancos DBF do SINAN, auditoria epidemiológica e apoio à decisão.</div>',
             unsafe_allow_html=True
@@ -518,7 +605,10 @@ def tela_login():
         with st.form("form_login", clear_on_submit=False):
             usuario = st.text_input("Usuário")
             senha = st.text_input("Senha", type="password")
-            entrar = st.form_submit_button("Entrar", use_container_width=True)
+            entrar = st.form_submit_button(
+                "Entrar",
+                use_container_width=True
+            )
 
             if entrar:
                 if fazer_login(usuario, senha):
@@ -526,7 +616,10 @@ def tela_login():
                 else:
                     st.error("Usuário ou senha inválidos.")
 
-        st.markdown('<div class="hz-auth-divider">ou</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="hz-auth-divider">ou</div>',
+            unsafe_allow_html=True
+        )
 
         c1, c2 = st.columns(2)
 
@@ -540,7 +633,10 @@ def tela_login():
                 st.session_state["auth_tela"] = "redefinir_email"
                 st.rerun()
 
-        st.markdown('<div class="hz-note">Ambiente seguro • acesso verificado</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="hz-note">Ambiente seguro • acesso verificado</div>',
+            unsafe_allow_html=True
+        )
 
     elif tela == "cadastro":
         st.markdown('<div class="hz-auth-panel">', unsafe_allow_html=True)
@@ -557,7 +653,10 @@ def tela_login():
             senha = st.text_input("Senha", type="password")
             confirmar = st.text_input("Confirmar senha", type="password")
             aceite = st.checkbox("Li e aceito os termos de uso e política de privacidade")
-            cadastrar = st.form_submit_button("Cadastrar", use_container_width=True)
+            cadastrar = st.form_submit_button(
+                "Cadastrar",
+                use_container_width=True
+            )
 
             if cadastrar:
                 usuarios = carregar_usuarios()
@@ -574,7 +673,12 @@ def tela_login():
                 elif not aceite:
                     st.error("É necessário aceitar os termos para continuar.")
                 else:
-                    iniciar_verificacao_cadastro(nome, email, usuario, senha)
+                    iniciar_verificacao_cadastro(
+                        nome,
+                        email,
+                        usuario,
+                        senha
+                    )
                     st.rerun()
 
         if st.button("Voltar para login", use_container_width=True):
@@ -593,9 +697,12 @@ def tela_login():
             unsafe_allow_html=True
         )
 
-        exibir_codigo_demo("cadastro_pendente")
+        exibir_codigo_teste("cadastro_pendente")
 
-        codigo = st.text_input("Código de verificação", max_chars=4)
+        codigo = st.text_input(
+            "Código de verificação",
+            max_chars=4
+        )
 
         if st.button("Verificar código", use_container_width=True):
             if codigo == pendente.get("codigo"):
@@ -607,8 +714,10 @@ def tela_login():
                         "perfil": "Demo",
                         "email": pendente["email"],
                         "verificado": True,
+                        "bloqueado": False,
                     }
                 )
+
                 st.session_state.pop("cadastro_pendente", None)
                 st.session_state["auth_tela"] = "cadastro_sucesso"
                 st.rerun()
@@ -655,7 +764,10 @@ def tela_login():
 
         with st.form("form_redefinir_email", clear_on_submit=False):
             usuario = st.text_input("Usuário")
-            enviar = st.form_submit_button("Enviar código", use_container_width=True)
+            enviar = st.form_submit_button(
+                "Enviar código",
+                use_container_width=True
+            )
 
             if enviar:
                 iniciar_redefinicao(str(usuario).strip())
@@ -677,9 +789,12 @@ def tela_login():
             unsafe_allow_html=True
         )
 
-        exibir_codigo_demo("redefinicao_pendente")
+        exibir_codigo_teste("redefinicao_pendente")
 
-        codigo = st.text_input("Código de verificação", max_chars=4)
+        codigo = st.text_input(
+            "Código de verificação",
+            max_chars=4
+        )
 
         if st.button("Verificar código", use_container_width=True):
             if codigo == pendente.get("codigo"):
@@ -711,7 +826,10 @@ def tela_login():
         with st.form("form_nova_senha", clear_on_submit=False):
             nova = st.text_input("Nova senha", type="password")
             confirmar = st.text_input("Confirmar nova senha", type="password")
-            salvar = st.form_submit_button("Redefinir senha", use_container_width=True)
+            salvar = st.form_submit_button(
+                "Redefinir senha",
+                use_container_width=True
+            )
 
             if salvar:
                 if not nova:
@@ -724,7 +842,11 @@ def tela_login():
                     dados = dict(usuarios[usuario])
                     dados["senha"] = nova
                     dados["verificado"] = True
-                    salvar_usuario_runtime(usuario, dados)
+
+                    salvar_usuario_runtime(
+                        usuario,
+                        dados
+                    )
 
                     st.session_state.pop("redefinicao_pendente", None)
                     st.success("Senha redefinida com sucesso.")
