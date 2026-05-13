@@ -4,6 +4,7 @@ import json
 import random
 import smtplib
 import ssl
+from datetime import datetime
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -11,6 +12,8 @@ import streamlit as st
 
 
 ARQUIVO_USUARIOS = Path("data/usuarios.json")
+ARQUIVO_EXCLUSAO = Path("data/solicitacoes_exclusao.json")
+PASTA_AVATARES = Path("data/avatars")
 
 
 USUARIOS_PADRAO = {
@@ -19,6 +22,16 @@ USUARIOS_PADRAO = {
         "nome": "Administrador",
         "perfil": "Admin",
         "email": "admin@horizonte.local",
+        "municipio": "",
+        "instituicao": "Horizonte",
+        "cargo": "Administrador",
+        "funcao": "Gestão da plataforma",
+        "tema": "Escuro",
+        "aceitou_lgpd": True,
+        "data_aceite_lgpd": "",
+        "avatar_path": "",
+        "ultimo_acesso": "",
+        "historico_acessos": [],
         "verificado": True,
         "bloqueado": False,
     },
@@ -27,43 +40,74 @@ USUARIOS_PADRAO = {
         "nome": "Usuário Demonstração",
         "perfil": "Demo",
         "email": "demo@horizonte.local",
+        "municipio": "",
+        "instituicao": "",
+        "cargo": "",
+        "funcao": "",
+        "tema": "Escuro",
+        "aceitou_lgpd": False,
+        "data_aceite_lgpd": "",
+        "avatar_path": "",
+        "ultimo_acesso": "",
+        "historico_acessos": [],
         "verificado": True,
         "bloqueado": False,
     },
 }
 
 
-def garantir_pasta_data():
+def agora_iso():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def garantir_pastas():
     ARQUIVO_USUARIOS.parent.mkdir(parents=True, exist_ok=True)
+    PASTA_AVATARES.mkdir(parents=True, exist_ok=True)
 
 
-def carregar_usuarios_arquivo():
-    garantir_pasta_data()
+def carregar_json(caminho, padrao):
+    garantir_pastas()
 
-    if not ARQUIVO_USUARIOS.exists():
-        return {}
+    if not caminho.exists():
+        return copy.deepcopy(padrao)
 
     try:
-        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
+        with open(caminho, "r", encoding="utf-8") as f:
             dados = json.load(f)
 
-        return dados if isinstance(dados, dict) else {}
+        return dados if isinstance(dados, type(padrao)) else copy.deepcopy(padrao)
 
     except Exception:
-        return {}
+        return copy.deepcopy(padrao)
 
 
-def salvar_usuarios_arquivo(usuarios):
-    garantir_pasta_data()
+def salvar_json(caminho, dados):
+    garantir_pastas()
 
     try:
-        with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
-            json.dump(usuarios, f, ensure_ascii=False, indent=4)
+        with open(caminho, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=4)
 
         return True
 
     except Exception:
         return False
+
+
+def carregar_usuarios_arquivo():
+    return carregar_json(ARQUIVO_USUARIOS, {})
+
+
+def salvar_usuarios_arquivo(usuarios):
+    return salvar_json(ARQUIVO_USUARIOS, usuarios)
+
+
+def carregar_solicitacoes_exclusao():
+    return carregar_json(ARQUIVO_EXCLUSAO, [])
+
+
+def salvar_solicitacoes_exclusao(solicitacoes):
+    return salvar_json(ARQUIVO_EXCLUSAO, solicitacoes)
 
 
 def carregar_usuarios_secrets():
@@ -82,11 +126,43 @@ def carregar_usuarios_secrets():
         return {}
 
 
+def normalizar_usuario(dados):
+    base = {
+        "senha": "",
+        "nome": "",
+        "perfil": "Usuário",
+        "email": "",
+        "municipio": "",
+        "instituicao": "",
+        "cargo": "",
+        "funcao": "",
+        "tema": "Escuro",
+        "aceitou_lgpd": False,
+        "data_aceite_lgpd": "",
+        "avatar_path": "",
+        "ultimo_acesso": "",
+        "historico_acessos": [],
+        "verificado": False,
+        "bloqueado": False,
+    }
+
+    base.update(dict(dados))
+
+    if not isinstance(base.get("historico_acessos"), list):
+        base["historico_acessos"] = []
+
+    return base
+
+
 def carregar_usuarios():
     usuarios = copy.deepcopy(USUARIOS_PADRAO)
     usuarios.update(carregar_usuarios_secrets())
     usuarios.update(carregar_usuarios_arquivo())
-    return usuarios
+
+    return {
+        usuario: normalizar_usuario(dados)
+        for usuario, dados in usuarios.items()
+    }
 
 
 def salvar_usuario_runtime(usuario, dados):
@@ -96,7 +172,7 @@ def salvar_usuario_runtime(usuario, dados):
         return False
 
     usuarios_arquivo = carregar_usuarios_arquivo()
-    usuarios_arquivo[usuario] = dados
+    usuarios_arquivo[usuario] = normalizar_usuario(dados)
 
     return salvar_usuarios_arquivo(usuarios_arquivo)
 
@@ -110,6 +186,60 @@ def excluir_usuario_runtime(usuario):
         return salvar_usuarios_arquivo(usuarios_arquivo)
 
     return False
+
+
+def registrar_solicitacao_exclusao(usuario, motivo=""):
+    usuarios = carregar_usuarios()
+    dados = usuarios.get(usuario, {})
+
+    solicitacoes = carregar_solicitacoes_exclusao()
+
+    solicitacoes.append({
+        "usuario": usuario,
+        "nome": dados.get("nome", ""),
+        "email": dados.get("email", ""),
+        "perfil": dados.get("perfil", ""),
+        "motivo": motivo,
+        "status": "Pendente",
+        "data_solicitacao": agora_iso(),
+    })
+
+    return salvar_solicitacoes_exclusao(solicitacoes)
+
+
+def atualizar_status_solicitacao_exclusao(indice, status):
+    solicitacoes = carregar_solicitacoes_exclusao()
+
+    if indice < 0 or indice >= len(solicitacoes):
+        return False
+
+    solicitacoes[indice]["status"] = status
+    solicitacoes[indice]["data_atualizacao"] = agora_iso()
+
+    return salvar_solicitacoes_exclusao(solicitacoes)
+
+
+def salvar_avatar_usuario(usuario, arquivo):
+    if arquivo is None:
+        return ""
+
+    garantir_pastas()
+
+    extensao = Path(arquivo.name).suffix.lower()
+
+    if extensao not in [".png", ".jpg", ".jpeg", ".webp"]:
+        extensao = ".png"
+
+    caminho = PASTA_AVATARES / f"{usuario}{extensao}"
+
+    try:
+        with open(caminho, "wb") as f:
+            f.write(arquivo.getbuffer())
+
+        return str(caminho)
+
+    except Exception:
+        return ""
 
 
 def imagem_base64(caminho):
@@ -197,10 +327,25 @@ def fazer_login(usuario, senha):
             return False
 
         if senha == dados.get("senha"):
+            momento = agora_iso()
+
+            dados["ultimo_acesso"] = momento
+            historico = dados.get("historico_acessos", [])
+
+            if not isinstance(historico, list):
+                historico = []
+
+            historico.append(momento)
+            dados["historico_acessos"] = historico[-20:]
+
+            salvar_usuario_runtime(usuario, dados)
+
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
             st.session_state["nome_usuario"] = dados.get("nome", usuario)
             st.session_state["perfil_usuario"] = dados.get("perfil", "Usuário")
+            st.session_state["tema_usuario"] = dados.get("tema", "Escuro")
+
             return True
 
     return False
@@ -212,6 +357,7 @@ def fazer_logout():
         "usuario",
         "nome_usuario",
         "perfil_usuario",
+        "tema_usuario",
         "df_sinan_atual",
         "df_sinan_publico",
         "agravo_sinan_atual",
@@ -369,20 +515,6 @@ def css_login():
             margin-top: 18px;
         }}
 
-        .hz-success-icon {{
-            width: 72px;
-            height: 72px;
-            border-radius: 999px;
-            border: 2px solid #00ED64;
-            color: #00ED64 !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 18px auto;
-            font-size: 2.2rem;
-            font-weight: 900;
-        }}
-
         input {{
             background: rgba(8, 19, 31, 0.72) !important;
             color: #F8FAFC !important;
@@ -537,10 +669,7 @@ def tela_login():
             senha = st.text_input("Senha", type="password", placeholder="Senha")
             st.checkbox("Lembrar de mim", value=True)
 
-            entrar = st.form_submit_button(
-                "Entrar",
-                use_container_width=True
-            )
+            entrar = st.form_submit_button("Entrar", use_container_width=True)
 
             if entrar:
                 if fazer_login(usuario, senha):
@@ -548,10 +677,7 @@ def tela_login():
                 else:
                     st.error("Usuário ou senha inválidos.")
 
-        st.markdown(
-            '<div class="hz-divider">ou</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="hz-divider">ou</div>', unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
 
@@ -586,10 +712,7 @@ def tela_login():
             confirmar = st.text_input("Confirmar senha", type="password")
             aceite = st.checkbox("Li e aceito os termos de uso e política de privacidade")
 
-            cadastrar = st.form_submit_button(
-                "Cadastrar",
-                use_container_width=True
-            )
+            cadastrar = st.form_submit_button("Cadastrar", use_container_width=True)
 
             if cadastrar:
                 usuarios = carregar_usuarios()
@@ -638,6 +761,16 @@ def tela_login():
                         "nome": pendente["nome"],
                         "perfil": "Demo",
                         "email": pendente["email"],
+                        "municipio": "",
+                        "instituicao": "",
+                        "cargo": "",
+                        "funcao": "",
+                        "tema": "Escuro",
+                        "aceitou_lgpd": True,
+                        "data_aceite_lgpd": agora_iso(),
+                        "avatar_path": "",
+                        "ultimo_acesso": "",
+                        "historico_acessos": [],
                         "verificado": True,
                         "bloqueado": False,
                     }
@@ -665,19 +798,11 @@ def tela_login():
         st.markdown('</div>', unsafe_allow_html=True)
 
     elif tela == "cadastro_sucesso":
-        st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
-        st.markdown('<div class="hz-success-icon">✓</div>', unsafe_allow_html=True)
-        st.markdown('<div class="hz-mini-title">Conta verificada!</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="hz-mini-subtitle">Seu cadastro foi concluído e o usuário já integra a lista de acesso da plataforma.</div>',
-            unsafe_allow_html=True
-        )
+        st.success("Conta verificada! Faça login para continuar.")
 
         if st.button("Ir para o login", use_container_width=True):
             st.session_state["auth_tela"] = "login"
             st.rerun()
-
-        st.markdown('</div>', unsafe_allow_html=True)
 
     elif tela == "redefinir_email":
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
@@ -689,11 +814,7 @@ def tela_login():
 
         with st.form("form_redefinir_email", clear_on_submit=False):
             usuario = st.text_input("Usuário")
-
-            enviar = st.form_submit_button(
-                "Enviar código",
-                use_container_width=True
-            )
+            enviar = st.form_submit_button("Enviar código", use_container_width=True)
 
             if enviar:
                 iniciar_redefinicao(str(usuario).strip())
@@ -741,19 +862,11 @@ def tela_login():
 
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar nova senha</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="hz-mini-subtitle">Defina uma nova senha para sua conta.</div>',
-            unsafe_allow_html=True
-        )
 
         with st.form("form_nova_senha", clear_on_submit=False):
             nova = st.text_input("Nova senha", type="password")
             confirmar = st.text_input("Confirmar nova senha", type="password")
-
-            salvar = st.form_submit_button(
-                "Redefinir senha",
-                use_container_width=True
-            )
+            salvar = st.form_submit_button("Redefinir senha", use_container_width=True)
 
             if salvar:
                 if not nova:
