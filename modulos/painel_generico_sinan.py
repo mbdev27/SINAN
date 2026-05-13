@@ -5,6 +5,12 @@ import plotly.express as px
 from utils.tema import CORES
 from mappings.generico_sinan import gerar_tabela_publica_generica
 from utils.auditoria_sinan import gerar_auditoria_sinan
+from utils.auth import obter_usuario_atual, carregar_usuarios
+from utils.relatorio_pdf import gerar_relatorio_tecnico_pdf
+from utils.alertas_inteligentes import (
+    gerar_alertas_inteligentes,
+    classificar_cor_nivel,
+)
 
 
 def primeira_coluna_existente(df, candidatos):
@@ -275,6 +281,101 @@ def aplicar_filtro_multiselect(df, coluna, label, key):
     return df
 
 
+def obter_municipio_usuario():
+    usuario = obter_usuario_atual()
+    login = usuario.get("usuario", "")
+
+    try:
+        usuarios = carregar_usuarios()
+        dados = usuarios.get(login, {})
+        return (
+            dados.get("municipio")
+            or dados.get("instituicao")
+            or "Não informado"
+        )
+    except Exception:
+        return "Não informado"
+
+
+def montar_observacoes_automaticas(alertas_df):
+    observacoes = []
+
+    if alertas_df is None or alertas_df.empty:
+        return ["Não foram identificados alertas automáticos críticos no recorte analisado."]
+
+    for _, linha in alertas_df.iterrows():
+        nivel = linha.get("Nível", "")
+        titulo = linha.get("Título", "")
+        descricao = linha.get("Descrição", "")
+
+        observacoes.append(
+            f"{nivel} - {titulo}: {descricao}"
+        )
+
+    return observacoes
+
+
+def render_alertas(alertas_df):
+    st.markdown("---")
+    st.header("🚨 Alertas inteligentes")
+
+    if alertas_df is None or alertas_df.empty:
+        st.info("Nenhum alerta inteligente gerado.")
+        return
+
+    col1, col2, col3 = st.columns(3)
+
+    total_alto = len(alertas_df[alertas_df["Nível"].str.lower() == "alto"])
+    total_medio = len(
+        alertas_df[
+            alertas_df["Nível"].str.lower().isin(["médio", "medio"])
+        ]
+    )
+    total_baixo = len(alertas_df[alertas_df["Nível"].str.lower() == "baixo"])
+
+    col1.metric("Alertas altos", total_alto)
+    col2.metric("Alertas médios", total_medio)
+    col3.metric("Alertas baixos", total_baixo)
+
+    for _, alerta in alertas_df.iterrows():
+        icone = classificar_cor_nivel(alerta.get("Nível", ""))
+
+        with st.container():
+            st.markdown(
+                f"""
+                <div style="
+                    background: rgba(8, 19, 31, 0.72);
+                    border: 1px solid rgba(255,255,255,0.10);
+                    border-left: 6px solid #00ED64;
+                    border-radius: 18px;
+                    padding: 18px;
+                    margin-bottom: 12px;
+                ">
+                    <div style="font-size: 0.85rem; color: #E1E8ED; font-weight: 800;">
+                        {icone} {alerta.get("Tipo", "")} • {alerta.get("Nível", "")}
+                    </div>
+                    <div style="font-size: 1.15rem; color: #FFFFFF; font-weight: 900; margin-top: 4px;">
+                        {alerta.get("Título", "")}
+                    </div>
+                    <div style="font-size: 0.95rem; color: #E1E8ED; line-height: 1.55; margin-top: 8px;">
+                        {alerta.get("Descrição", "")}
+                    </div>
+                    <div style="font-size: 0.9rem; color: #00ED64; line-height: 1.55; margin-top: 10px; font-weight: 700;">
+                        Recomendação: {alerta.get("Recomendação", "")}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    with st.expander("📋 Ver tabela técnica de alertas"):
+        st.dataframe(
+            alertas_df,
+            use_container_width=True,
+            height=320
+        )
+
+
 def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
     st.markdown(
         f"""
@@ -284,7 +385,8 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
             <p>
                 Visão automática para bancos DBF do SINAN ainda sem painel específico.
                 O painel identifica colunas-chave, gera indicadores, filtros, série temporal,
-                perfil epidemiológico, qualidade dos dados e exportações.
+                perfil epidemiológico, qualidade dos dados, alertas inteligentes,
+                exportações e relatório técnico.
             </p>
         </div>
         """,
@@ -368,6 +470,12 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
     auditoria = gerar_auditoria_sinan(df_filtrado, agravo=nome_agravo)
     estrutura = montar_estrutura(df_filtrado)
 
+    alertas_df = gerar_alertas_inteligentes(
+        df_filtrado,
+        auditoria,
+        coluna_data=colunas["data"]
+    )
+
     total = len(df_filtrado)
     colunas_qtd = len(df_filtrado.columns)
     score = auditoria.get("score_banco", 0)
@@ -383,6 +491,8 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
     k3.metric("Score", f"{score}%")
     k4.metric("Qualidade", qualidade)
     k5.metric("Duplicidades", duplicidades_qtd)
+
+    render_alertas(alertas_df)
 
     st.markdown("---")
     st.header("📈 Série temporal")
@@ -424,14 +534,6 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
             )
 
             st.plotly_chart(fig, use_container_width=True)
-
-            media = serie["Registros"].mean()
-            ultimo = serie["Registros"].iloc[-1]
-
-            if len(serie) >= 3 and ultimo > media * 1.5:
-                st.warning(
-                    "⚠️ O último período apresenta volume acima da média histórica filtrada."
-                )
         else:
             st.info("Não há datas válidas para montar série temporal.")
     else:
@@ -532,36 +634,21 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
         else:
             st.info("Não foram encontradas colunas vazias relevantes.")
 
+    inconsistencias = {
+        "Duplicidades": auditoria.get("duplicidades", pd.DataFrame()),
+        "Sexo incompatível": auditoria.get("sexo_incompativel", pd.DataFrame()),
+        "Idade incompatível": auditoria.get("idade_incompativel", pd.DataFrame()),
+        "CID incompatível": auditoria.get("cid_incompativel", pd.DataFrame()),
+        "Município divergente": auditoria.get("municipio_divergente", pd.DataFrame()),
+    }
+
     with st.expander("🔍 Ver inconsistências detalhadas"):
-        st.markdown("### Duplicidades")
-        st.dataframe(
-            auditoria.get("duplicidades", pd.DataFrame()),
-            use_container_width=True
-        )
-
-        st.markdown("### Sexo incompatível")
-        st.dataframe(
-            auditoria.get("sexo_incompativel", pd.DataFrame()),
-            use_container_width=True
-        )
-
-        st.markdown("### Idade incompatível")
-        st.dataframe(
-            auditoria.get("idade_incompativel", pd.DataFrame()),
-            use_container_width=True
-        )
-
-        st.markdown("### CID incompatível")
-        st.dataframe(
-            auditoria.get("cid_incompativel", pd.DataFrame()),
-            use_container_width=True
-        )
-
-        st.markdown("### Município divergente")
-        st.dataframe(
-            auditoria.get("municipio_divergente", pd.DataFrame()),
-            use_container_width=True
-        )
+        for titulo, tabela in inconsistencias.items():
+            st.markdown(f"### {titulo}")
+            st.dataframe(
+                tabela,
+                use_container_width=True
+            )
 
     st.markdown("---")
     st.header("📋 Dados filtrados")
@@ -573,9 +660,9 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
     )
 
     st.markdown("---")
-    st.header("📥 Exportações")
+    st.header("📥 Exportações e relatório técnico")
 
-    col_exp1, col_exp2, col_exp3 = st.columns(3)
+    col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
 
     with col_exp1:
         st.download_button(
@@ -595,21 +682,21 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
             use_container_width=True
         )
 
-    with col_exp3:
-        resumo = pd.DataFrame([
-            {
-                "Agravo": nome_agravo,
-                "Registros": total,
-                "Colunas": colunas_qtd,
-                "Score de qualidade": score,
-                "Classificação": qualidade,
-                "Duplicidades": duplicidades_qtd,
-                "Coluna de data": colunas["data"] or "",
-                "Coluna de município": colunas["municipio"] or "",
-                "Coluna de unidade": colunas["unidade"] or "",
-            }
-        ])
+    resumo = pd.DataFrame([
+        {
+            "Agravo": nome_agravo,
+            "Registros": total,
+            "Colunas": colunas_qtd,
+            "Score de qualidade": score,
+            "Classificação": qualidade,
+            "Duplicidades": duplicidades_qtd,
+            "Coluna de data": colunas["data"] or "",
+            "Coluna de município": colunas["municipio"] or "",
+            "Coluna de unidade": colunas["unidade"] or "",
+        }
+    ])
 
+    with col_exp3:
         st.download_button(
             "Baixar resumo técnico",
             data=resumo.to_csv(index=False).encode("utf-8"),
@@ -617,3 +704,41 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
             mime="text/csv",
             use_container_width=True
         )
+
+    with col_exp4:
+        usuario = obter_usuario_atual()
+        municipio_usuario = obter_municipio_usuario()
+
+        pdf_bytes = gerar_relatorio_tecnico_pdf(
+            nome_agravo=nome_agravo,
+            usuario=usuario.get("nome", usuario.get("usuario", "Não informado")),
+            municipio=municipio_usuario,
+            total_registros=total,
+            total_colunas=colunas_qtd,
+            score_qualidade=score,
+            classificacao_qualidade=qualidade,
+            duplicidades=duplicidades_qtd,
+            coluna_data=colunas["data"] or "",
+            coluna_municipio=colunas["municipio"] or "",
+            coluna_unidade=colunas["unidade"] or "",
+            estrutura_campos=estrutura,
+            colunas_vazias=auditoria.get("colunas_vazias", pd.DataFrame()),
+            inconsistencias=inconsistencias,
+            resumo_extra=montar_observacoes_automaticas(alertas_df),
+        )
+
+        st.download_button(
+            "Gerar relatório PDF",
+            data=pdf_bytes,
+            file_name="relatorio_tecnico_horizonte.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+
+    st.download_button(
+        "📥 Baixar alertas inteligentes",
+        data=alertas_df.to_csv(index=False).encode("utf-8"),
+        file_name="alertas_inteligentes_horizonte.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
