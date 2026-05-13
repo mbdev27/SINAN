@@ -7,7 +7,7 @@ import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -27,6 +27,8 @@ CORES_PDF = {
     "midnight": "#101820",
     "white": "#F8FAFC",
     "muted": "#64748B",
+    "danger": "#DC2626",
+    "warning": "#F59E0B",
 }
 
 
@@ -53,64 +55,6 @@ def limpar_texto(valor):
         texto = texto.replace(antigo, novo)
 
     return texto.strip()
-
-
-def limitar_dataframe(df, linhas=20, colunas=6):
-    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
-        return pd.DataFrame()
-
-    df_temp = df.copy()
-
-    df_temp = df_temp.iloc[:linhas, :colunas]
-
-    for coluna in df_temp.columns:
-        df_temp[coluna] = df_temp[coluna].apply(limpar_texto)
-
-    return df_temp
-
-
-def dataframe_para_tabela(df, largura_total=17 * cm):
-    df = limitar_dataframe(df)
-
-    if df.empty:
-        return Paragraph("Sem dados disponíveis para esta seção.", estilo_normal())
-
-    dados = [list(df.columns)] + df.astype(str).values.tolist()
-
-    qtd_colunas = len(dados[0])
-
-    largura_coluna = largura_total / max(qtd_colunas, 1)
-
-    tabela = Table(
-        dados,
-        colWidths=[largura_coluna] * qtd_colunas,
-        repeatRows=1,
-    )
-
-    tabela.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(CORES_PDF["navy"])),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 8),
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FFFFFF")),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor(CORES_PDF["midnight"])),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 1), (-1, -1), 7),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-
-            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D6DEE6")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ])
-    )
-
-    return tabela
 
 
 def estilo_titulo():
@@ -162,14 +106,15 @@ def estilo_normal():
     )
 
 
-def estilo_kpi():
+def estilo_destaque():
     return ParagraphStyle(
-        "KPIHorizonte",
+        "DestaqueHorizonte",
         fontName="Helvetica-Bold",
-        fontSize=11,
-        leading=14,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor(CORES_PDF["midnight"]),
+        fontSize=12,
+        leading=16,
+        alignment=TA_LEFT,
+        textColor=colors.HexColor(CORES_PDF["navy"]),
+        spaceAfter=10,
     )
 
 
@@ -190,6 +135,79 @@ def adicionar_logo(elementos):
                 return
             except Exception:
                 return
+
+
+def rodape(canvas, doc):
+    canvas.saveState()
+
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor(CORES_PDF["muted"]))
+
+    texto = f"Horizonte Health Intelligence - Relatório Técnico - Página {doc.page}"
+
+    canvas.drawCentredString(
+        A4[0] / 2,
+        1.0 * cm,
+        texto,
+    )
+
+    canvas.restoreState()
+
+
+def limitar_dataframe(df, linhas=20, colunas=6):
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return pd.DataFrame()
+
+    df_temp = df.copy()
+    df_temp = df_temp.iloc[:linhas, :colunas]
+
+    for coluna in df_temp.columns:
+        df_temp[coluna] = df_temp[coluna].apply(limpar_texto)
+
+    return df_temp
+
+
+def dataframe_para_tabela(df, linhas=20, colunas=6, largura_total=17 * cm):
+    df = limitar_dataframe(df, linhas=linhas, colunas=colunas)
+
+    if df.empty:
+        return Paragraph("Sem dados disponíveis para esta seção.", estilo_normal())
+
+    dados = [list(df.columns)] + df.astype(str).values.tolist()
+
+    qtd_colunas = len(dados[0])
+    largura_coluna = largura_total / max(qtd_colunas, 1)
+
+    tabela = Table(
+        dados,
+        colWidths=[largura_coluna] * qtd_colunas,
+        repeatRows=1,
+    )
+
+    tabela.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(CORES_PDF["navy"])),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+
+            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FFFFFF")),
+            ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor(CORES_PDF["midnight"])),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 7),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D6DEE6")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ])
+    )
+
+    return tabela
 
 
 def tabela_kpis(kpis):
@@ -233,21 +251,184 @@ def tabela_kpis(kpis):
     return tabela
 
 
-def rodape(canvas, doc):
-    canvas.saveState()
+def tabela_alertas_resumo(alertas_df):
+    if alertas_df is None or not isinstance(alertas_df, pd.DataFrame) or alertas_df.empty:
+        return Paragraph("Nenhum alerta automático informado.", estilo_normal())
 
-    canvas.setFont("Helvetica", 8)
-    canvas.setFillColor(colors.HexColor(CORES_PDF["muted"]))
+    colunas = [
+        c for c in ["Nível", "Tipo", "Título", "Recomendação"]
+        if c in alertas_df.columns
+    ]
 
-    texto = f"Horizonte Health Intelligence - Relatório Técnico - Página {doc.page}"
+    if not colunas:
+        return Paragraph("Nenhum alerta automático informado.", estilo_normal())
 
-    canvas.drawCentredString(
-        A4[0] / 2,
-        1.0 * cm,
-        texto,
+    df = alertas_df[colunas].head(8).copy()
+
+    return dataframe_para_tabela(
+        df,
+        linhas=8,
+        colunas=len(colunas),
+        largura_total=17 * cm,
     )
 
-    canvas.restoreState()
+
+def gerar_resumo_executivo_pdf(
+    nome_agravo,
+    usuario,
+    municipio,
+    total_registros,
+    total_colunas,
+    score_qualidade,
+    classificacao_qualidade,
+    duplicidades,
+    coluna_data="",
+    coluna_municipio="",
+    coluna_unidade="",
+    alertas_df=None,
+    observacoes=None,
+):
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.4 * cm,
+        bottomMargin=1.6 * cm,
+        title=f"Resumo Executivo - {nome_agravo}",
+        author="Horizonte Health Intelligence",
+    )
+
+    elementos = []
+
+    adicionar_logo(elementos)
+
+    elementos.append(
+        Paragraph(
+            "Resumo Executivo",
+            estilo_titulo()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            f"{limpar_texto(nome_agravo)}",
+            estilo_subtitulo()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}",
+            estilo_normal()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            f"Responsável: <b>{limpar_texto(usuario)}</b>",
+            estilo_normal()
+        )
+    )
+
+    elementos.append(
+        Paragraph(
+            f"Município/Instituição: <b>{limpar_texto(municipio)}</b>",
+            estilo_normal()
+        )
+    )
+
+    elementos.append(Spacer(1, 0.35 * cm))
+
+    kpis = [
+        {"label": "Registros", "value": total_registros},
+        {"label": "Colunas", "value": total_colunas},
+        {"label": "Score", "value": f"{score_qualidade}%"},
+        {"label": "Qualidade", "value": classificacao_qualidade},
+    ]
+
+    elementos.append(tabela_kpis(kpis))
+    elementos.append(Spacer(1, 0.45 * cm))
+
+    elementos.append(Paragraph("Síntese executiva", estilo_secao()))
+
+    texto_sintese = (
+        f"O banco analisado corresponde ao agravo <b>{limpar_texto(nome_agravo)}</b>. "
+        f"Foram identificados <b>{total_registros}</b> registros distribuídos em "
+        f"<b>{total_colunas}</b> colunas. O score de qualidade foi de "
+        f"<b>{score_qualidade}%</b>, classificado como "
+        f"<b>{limpar_texto(classificacao_qualidade)}</b>. "
+        f"Foram identificadas <b>{duplicidades}</b> duplicidades prováveis no recorte avaliado."
+    )
+
+    elementos.append(Paragraph(texto_sintese, estilo_normal()))
+
+    elementos.append(Paragraph("Colunas estratégicas identificadas", estilo_secao()))
+
+    dados_colunas = pd.DataFrame([
+        {
+            "Elemento": "Data principal",
+            "Coluna": coluna_data or "Não localizada",
+        },
+        {
+            "Elemento": "Município",
+            "Coluna": coluna_municipio or "Não localizada",
+        },
+        {
+            "Elemento": "Unidade notificadora",
+            "Coluna": coluna_unidade or "Não localizada",
+        },
+    ])
+
+    elementos.append(dataframe_para_tabela(dados_colunas, linhas=3, colunas=2))
+    elementos.append(Spacer(1, 0.35 * cm))
+
+    elementos.append(Paragraph("Principais alertas inteligentes", estilo_secao()))
+    elementos.append(tabela_alertas_resumo(alertas_df))
+    elementos.append(Spacer(1, 0.35 * cm))
+
+    elementos.append(Paragraph("Recomendações automáticas", estilo_secao()))
+
+    if observacoes:
+        for item in observacoes[:8]:
+            elementos.append(
+                Paragraph(
+                    f"• {limpar_texto(item)}",
+                    estilo_normal()
+                )
+            )
+    else:
+        elementos.append(
+            Paragraph(
+                "Manter rotina de monitoramento, auditoria e qualificação periódica dos bancos.",
+                estilo_normal()
+            )
+        )
+
+    elementos.append(Spacer(1, 0.4 * cm))
+
+    elementos.append(Paragraph("Uso recomendado", estilo_secao()))
+
+    elementos.append(
+        Paragraph(
+            "Este resumo foi elaborado para apoio rápido em reuniões técnicas, "
+            "discussões de gestão, pactuações internas e priorização de ações. "
+            "Para análise detalhada, recomenda-se utilizar também o Relatório Técnico completo.",
+            estilo_normal()
+        )
+    )
+
+    doc.build(
+        elementos,
+        onFirstPage=rodape,
+        onLaterPages=rodape,
+    )
+
+    buffer.seek(0)
+
+    return buffer.getvalue()
 
 
 def gerar_relatorio_tecnico_pdf(
@@ -360,7 +541,7 @@ def gerar_relatorio_tecnico_pdf(
         },
     ])
 
-    elementos.append(dataframe_para_tabela(dados_colunas))
+    elementos.append(dataframe_para_tabela(dados_colunas, linhas=3, colunas=2))
     elementos.append(Spacer(1, 0.3 * cm))
 
     if resumo_extra:
@@ -369,7 +550,7 @@ def gerar_relatorio_tecnico_pdf(
         for item in resumo_extra:
             elementos.append(
                 Paragraph(
-                    f"- {limpar_texto(item)}",
+                    f"• {limpar_texto(item)}",
                     estilo_normal()
                 )
             )
