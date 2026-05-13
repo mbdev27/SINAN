@@ -33,10 +33,6 @@ USUARIOS_PADRAO = {
 }
 
 
-# ============================================================
-# PERSISTÊNCIA
-# ============================================================
-
 def garantir_pasta_data():
     ARQUIVO_USUARIOS.parent.mkdir(parents=True, exist_ok=True)
 
@@ -62,12 +58,7 @@ def salvar_usuarios_arquivo(usuarios):
 
     try:
         with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
-            json.dump(
-                usuarios,
-                f,
-                ensure_ascii=False,
-                indent=4
-            )
+            json.dump(usuarios, f, ensure_ascii=False, indent=4)
 
         return True
 
@@ -93,10 +84,8 @@ def carregar_usuarios_secrets():
 
 def carregar_usuarios():
     usuarios = copy.deepcopy(USUARIOS_PADRAO)
-
     usuarios.update(carregar_usuarios_secrets())
     usuarios.update(carregar_usuarios_arquivo())
-
     return usuarios
 
 
@@ -114,7 +103,6 @@ def salvar_usuario_runtime(usuario, dados):
 
 def excluir_usuario_runtime(usuario):
     usuario = str(usuario).strip()
-
     usuarios_arquivo = carregar_usuarios_arquivo()
 
     if usuario in usuarios_arquivo:
@@ -123,10 +111,6 @@ def excluir_usuario_runtime(usuario):
 
     return False
 
-
-# ============================================================
-# UTILITÁRIOS
-# ============================================================
 
 def imagem_base64(caminho):
     try:
@@ -156,38 +140,6 @@ def usuario_e_admin():
     perfil = str(st.session_state.get("perfil_usuario", "")).strip().lower()
     return perfil == "admin"
 
-
-# ============================================================
-# OCULTAR ADMIN NO MENU PARA NÃO ADM
-# ============================================================
-
-def ocultar_admin_para_nao_admin():
-    if usuario_e_admin():
-        return
-
-    st.markdown(
-        """
-        <style>
-        a[href*="Admin_Usuarios"],
-        a[href*="Admin%20Usuarios"],
-        a[href*="Admin-Usuarios"],
-        a[href*="9_Admin_Usuarios"],
-        a[href*="admin_usuarios"],
-        a[href*="admin-usuarios"] {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            overflow: hidden !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# E-MAIL
-# ============================================================
 
 def enviar_email_codigo(destinatario, codigo, assunto):
     try:
@@ -220,10 +172,7 @@ Caso você não tenha solicitado este acesso, ignore esta mensagem.
             int(smtp.get("port", 465)),
             context=contexto
         ) as server:
-            server.login(
-                smtp["user"],
-                smtp["password"]
-            )
+            server.login(smtp["user"], smtp["password"])
             server.send_message(msg)
 
         return True
@@ -231,10 +180,6 @@ Caso você não tenha solicitado este acesso, ignore esta mensagem.
     except Exception:
         return False
 
-
-# ============================================================
-# LOGIN / LOGOUT
-# ============================================================
 
 def fazer_login(usuario, senha):
     usuarios = carregar_usuarios()
@@ -284,10 +229,6 @@ def fazer_logout():
         if chave in st.session_state:
             del st.session_state[chave]
 
-
-# ============================================================
-# CSS LOGIN
-# ============================================================
 
 def css_login():
     fundo = None
@@ -482,26 +423,11 @@ def css_login():
         [data-testid="stAlert"] {{
             border-radius: 14px !important;
         }}
-
-        @media (max-width: 640px) {{
-            .block-container {{
-                max-width: 100% !important;
-                padding-top: 24px !important;
-            }}
-
-            [data-testid="stImage"] img {{
-                max-width: 210px !important;
-            }}
-        }}
         </style>
         """,
         unsafe_allow_html=True
     )
 
-
-# ============================================================
-# LOGO
-# ============================================================
 
 def exibir_logo():
     for caminho in [
@@ -528,10 +454,6 @@ def exibir_logo():
         unsafe_allow_html=True
     )
 
-
-# ============================================================
-# FLUXOS DE VERIFICAÇÃO
-# ============================================================
 
 def iniciar_verificacao_cadastro(nome, email, usuario, senha):
     codigo = gerar_codigo()
@@ -589,10 +511,6 @@ def exibir_codigo_teste(chave):
             st.info(f"Modo teste: código de verificação **{codigo}**")
 
 
-# ============================================================
-# TELAS
-# ============================================================
-
 def tela_login():
     css_login()
 
@@ -617,8 +535,7 @@ def tela_login():
         with st.form("form_login", clear_on_submit=False):
             usuario = st.text_input("Usuário", placeholder="Usuário")
             senha = st.text_input("Senha", type="password", placeholder="Senha")
-
-            lembrar = st.checkbox("Lembrar de mim", value=True)
+            st.checkbox("Lembrar de mim", value=True)
 
             entrar = st.form_submit_button(
                 "Entrar",
@@ -689,12 +606,7 @@ def tela_login():
                 elif not aceite:
                     st.error("É necessário aceitar os termos para continuar.")
                 else:
-                    iniciar_verificacao_cadastro(
-                        nome,
-                        email,
-                        usuario,
-                        senha
-                    )
+                    iniciar_verificacao_cadastro(nome, email, usuario, senha)
                     st.rerun()
 
         if st.button("Voltar para login", use_container_width=True):
@@ -873,5 +785,3 @@ def exigir_login():
     if not usuario_logado():
         tela_login()
         st.stop()
-
-    ocultar_admin_para_nao_admin()
