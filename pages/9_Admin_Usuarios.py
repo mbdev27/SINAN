@@ -1,5 +1,8 @@
-import streamlit as st
+import html
+from textwrap import dedent
+
 import pandas as pd
+import streamlit as st
 
 from utils.auth import (
     exigir_login,
@@ -21,7 +24,6 @@ st.set_page_config(
 )
 
 exigir_login()
-
 aplicar_tema_streamlit(st)
 aplicar_tema_plotly()
 
@@ -43,9 +45,92 @@ if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
     st.rerun()
 
 
-st.title("👥 Administração de Usuários")
-st.caption(
-    "Horizonte Health Intelligence • Gerenciamento de acessos, perfis, verificações e segurança da plataforma."
+st.markdown(
+    dedent("""
+    <style>
+    .admin-hero {
+        background: linear-gradient(135deg, rgba(10,38,71,.96), rgba(6,78,59,.92));
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 28px;
+        padding: 38px;
+        margin-bottom: 28px;
+        box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+
+    .admin-kicker {
+        color: #00ED64 !important;
+        font-size: .78rem;
+        font-weight: 900;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+        display: block;
+    }
+
+    .admin-title {
+        color: #FFFFFF !important;
+        font-size: clamp(2rem, 4vw, 3.6rem);
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: -.04em;
+        margin-bottom: 16px;
+    }
+
+    .admin-subtitle {
+        color: #E1E8ED !important;
+        font-size: 1.05rem;
+        line-height: 1.7;
+        max-width: 820px;
+    }
+
+    .admin-kpi-card {
+        background: linear-gradient(180deg, rgba(8,19,31,.86), rgba(5,15,25,.92));
+        border: 1px solid rgba(255,255,255,.10);
+        border-left: 6px solid #00ED64;
+        border-radius: 22px;
+        padding: 22px;
+        min-height: 128px;
+        box-shadow: 0 18px 45px rgba(0,0,0,.24);
+    }
+
+    .admin-kpi-label {
+        color: #C9D5DF !important;
+        font-size: .92rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .admin-kpi-value {
+        color: #FFFFFF !important;
+        font-size: 2.4rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .admin-section {
+        margin-top: 24px;
+        margin-bottom: 10px;
+        color: #FFFFFF !important;
+        font-size: 1.55rem;
+        font-weight: 900;
+    }
+    </style>
+    """),
+    unsafe_allow_html=True
+)
+
+
+st.markdown(
+    dedent("""
+    <div class="admin-hero">
+        <span class="admin-kicker">Horizonte Health Intelligence</span>
+        <div class="admin-title">Administração de Usuários</div>
+        <div class="admin-subtitle">
+            Gerencie acessos, perfis, verificações, bloqueios e segurança da plataforma.
+        </div>
+    </div>
+    """),
+    unsafe_allow_html=True
 )
 
 
@@ -70,23 +155,40 @@ for login, dados in usuarios.items():
 
 df_usuarios = pd.DataFrame(linhas)
 
-
 total_usuarios = len(df_usuarios)
 usuarios_admin = len(df_usuarios[df_usuarios["Perfil"] == "Admin"])
 usuarios_bloqueados = len(df_usuarios[df_usuarios["Bloqueado"] == "🔒 Sim"])
 usuarios_nao_verificados = len(df_usuarios[df_usuarios["Verificado"] == "❌ Não"])
 
 
+def kpi_card(label, value):
+    st.markdown(
+        dedent(f"""
+        <div class="admin-kpi-card">
+            <div class="admin-kpi-label">{html.escape(str(label))}</div>
+            <div class="admin-kpi-value">{html.escape(str(value))}</div>
+        </div>
+        """),
+        unsafe_allow_html=True
+    )
+
+
 k1, k2, k3, k4 = st.columns(4)
 
-k1.metric("Total de usuários", total_usuarios)
-k2.metric("Administradores", usuarios_admin)
-k3.metric("Bloqueados", usuarios_bloqueados)
-k4.metric("Não verificados", usuarios_nao_verificados)
+with k1:
+    kpi_card("Total de usuários", total_usuarios)
+
+with k2:
+    kpi_card("Administradores", usuarios_admin)
+
+with k3:
+    kpi_card("Bloqueados", usuarios_bloqueados)
+
+with k4:
+    kpi_card("Não verificados", usuarios_nao_verificados)
 
 
-st.markdown("---")
-st.subheader("👥 Usuários cadastrados")
+st.markdown('<div class="admin-section">👥 Usuários cadastrados</div>', unsafe_allow_html=True)
 
 st.dataframe(
     df_usuarios,
@@ -96,7 +198,7 @@ st.dataframe(
 
 
 st.markdown("---")
-st.subheader("⚙️ Editar usuário")
+st.markdown('<div class="admin-section">⚙️ Editar usuário</div>', unsafe_allow_html=True)
 
 lista_usuarios = list(usuarios.keys())
 
@@ -170,10 +272,7 @@ with b1:
         if nova_senha:
             dados_usuario["senha"] = nova_senha
 
-        ok = salvar_usuario_runtime(
-            usuario_selecionado,
-            dados_usuario
-        )
+        ok = salvar_usuario_runtime(usuario_selecionado, dados_usuario)
 
         if ok:
             st.success("Usuário atualizado com sucesso.")
@@ -186,10 +285,7 @@ with b2:
         dados_usuario["bloqueado"] = False
         dados_usuario["verificado"] = True
 
-        ok = salvar_usuario_runtime(
-            usuario_selecionado,
-            dados_usuario
-        )
+        ok = salvar_usuario_runtime(usuario_selecionado, dados_usuario)
 
         if ok:
             st.success("Usuário desbloqueado e verificado.")
@@ -212,7 +308,7 @@ with b3:
 
 
 st.markdown("---")
-st.subheader("➕ Criar usuário manualmente")
+st.markdown('<div class="admin-section">➕ Criar usuário manualmente</div>', unsafe_allow_html=True)
 
 with st.form("form_criar_usuario_admin", clear_on_submit=True):
     novo_nome = st.text_input("Nome completo")
@@ -269,7 +365,7 @@ with st.form("form_criar_usuario_admin", clear_on_submit=True):
 
 
 st.markdown("---")
-st.subheader("📥 Exportar usuários")
+st.markdown('<div class="admin-section">📥 Exportar usuários</div>', unsafe_allow_html=True)
 
 csv_usuarios = df_usuarios.to_csv(index=False).encode("utf-8")
 
