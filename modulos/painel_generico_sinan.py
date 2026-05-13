@@ -6,7 +6,10 @@ from utils.tema import CORES
 from mappings.generico_sinan import gerar_tabela_publica_generica
 from utils.auditoria_sinan import gerar_auditoria_sinan
 from utils.auth import obter_usuario_atual, carregar_usuarios
-from utils.relatorio_pdf import gerar_relatorio_tecnico_pdf
+from utils.relatorio_pdf import (
+    gerar_relatorio_tecnico_pdf,
+    gerar_resumo_executivo_pdf,
+)
 from utils.alertas_inteligentes import (
     gerar_alertas_inteligentes,
     classificar_cor_nivel,
@@ -340,33 +343,32 @@ def render_alertas(alertas_df):
     for _, alerta in alertas_df.iterrows():
         icone = classificar_cor_nivel(alerta.get("Nível", ""))
 
-        with st.container():
-            st.markdown(
-                f"""
-                <div style="
-                    background: rgba(8, 19, 31, 0.72);
-                    border: 1px solid rgba(255,255,255,0.10);
-                    border-left: 6px solid #00ED64;
-                    border-radius: 18px;
-                    padding: 18px;
-                    margin-bottom: 12px;
-                ">
-                    <div style="font-size: 0.85rem; color: #E1E8ED; font-weight: 800;">
-                        {icone} {alerta.get("Tipo", "")} • {alerta.get("Nível", "")}
-                    </div>
-                    <div style="font-size: 1.15rem; color: #FFFFFF; font-weight: 900; margin-top: 4px;">
-                        {alerta.get("Título", "")}
-                    </div>
-                    <div style="font-size: 0.95rem; color: #E1E8ED; line-height: 1.55; margin-top: 8px;">
-                        {alerta.get("Descrição", "")}
-                    </div>
-                    <div style="font-size: 0.9rem; color: #00ED64; line-height: 1.55; margin-top: 10px; font-weight: 700;">
-                        Recomendação: {alerta.get("Recomendação", "")}
-                    </div>
+        st.markdown(
+            f"""
+            <div style="
+                background: rgba(8, 19, 31, 0.72);
+                border: 1px solid rgba(255,255,255,0.10);
+                border-left: 6px solid #00ED64;
+                border-radius: 18px;
+                padding: 18px;
+                margin-bottom: 12px;
+            ">
+                <div style="font-size: 0.85rem; color: #E1E8ED; font-weight: 800;">
+                    {icone} {alerta.get("Tipo", "")} • {alerta.get("Nível", "")}
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+                <div style="font-size: 1.15rem; color: #FFFFFF; font-weight: 900; margin-top: 4px;">
+                    {alerta.get("Título", "")}
+                </div>
+                <div style="font-size: 0.95rem; color: #E1E8ED; line-height: 1.55; margin-top: 8px;">
+                    {alerta.get("Descrição", "")}
+                </div>
+                <div style="font-size: 0.9rem; color: #00ED64; line-height: 1.55; margin-top: 10px; font-weight: 700;">
+                    Recomendação: {alerta.get("Recomendação", "")}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with st.expander("📋 Ver tabela técnica de alertas"):
         st.dataframe(
@@ -386,7 +388,7 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
                 Visão automática para bancos DBF do SINAN ainda sem painel específico.
                 O painel identifica colunas-chave, gera indicadores, filtros, série temporal,
                 perfil epidemiológico, qualidade dos dados, alertas inteligentes,
-                exportações e relatório técnico.
+                exportações e relatórios técnicos.
             </p>
         </div>
         """,
@@ -660,7 +662,45 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
     )
 
     st.markdown("---")
-    st.header("📥 Exportações e relatório técnico")
+    st.header("📥 Exportações e relatórios")
+
+    usuario = obter_usuario_atual()
+    municipio_usuario = obter_municipio_usuario()
+    observacoes = montar_observacoes_automaticas(alertas_df)
+
+    resumo_pdf = gerar_resumo_executivo_pdf(
+        nome_agravo=nome_agravo,
+        usuario=usuario.get("nome", usuario.get("usuario", "Não informado")),
+        municipio=municipio_usuario,
+        total_registros=total,
+        total_colunas=colunas_qtd,
+        score_qualidade=score,
+        classificacao_qualidade=qualidade,
+        duplicidades=duplicidades_qtd,
+        coluna_data=colunas["data"] or "",
+        coluna_municipio=colunas["municipio"] or "",
+        coluna_unidade=colunas["unidade"] or "",
+        alertas_df=alertas_df,
+        observacoes=observacoes,
+    )
+
+    relatorio_pdf = gerar_relatorio_tecnico_pdf(
+        nome_agravo=nome_agravo,
+        usuario=usuario.get("nome", usuario.get("usuario", "Não informado")),
+        municipio=municipio_usuario,
+        total_registros=total,
+        total_colunas=colunas_qtd,
+        score_qualidade=score,
+        classificacao_qualidade=qualidade,
+        duplicidades=duplicidades_qtd,
+        coluna_data=colunas["data"] or "",
+        coluna_municipio=colunas["municipio"] or "",
+        coluna_unidade=colunas["unidade"] or "",
+        estrutura_campos=estrutura,
+        colunas_vazias=auditoria.get("colunas_vazias", pd.DataFrame()),
+        inconsistencias=inconsistencias,
+        resumo_extra=observacoes,
+    )
 
     col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
 
@@ -682,54 +722,19 @@ def render_painel_generico_sinan(df, nome_agravo="Agravo SINAN"):
             use_container_width=True
         )
 
-    resumo = pd.DataFrame([
-        {
-            "Agravo": nome_agravo,
-            "Registros": total,
-            "Colunas": colunas_qtd,
-            "Score de qualidade": score,
-            "Classificação": qualidade,
-            "Duplicidades": duplicidades_qtd,
-            "Coluna de data": colunas["data"] or "",
-            "Coluna de município": colunas["municipio"] or "",
-            "Coluna de unidade": colunas["unidade"] or "",
-        }
-    ])
-
     with col_exp3:
         st.download_button(
-            "Baixar resumo técnico",
-            data=resumo.to_csv(index=False).encode("utf-8"),
-            file_name="painel_universal_resumo_tecnico.csv",
-            mime="text/csv",
+            "Gerar resumo executivo PDF",
+            data=resumo_pdf,
+            file_name="resumo_executivo_horizonte.pdf",
+            mime="application/pdf",
             use_container_width=True
         )
 
     with col_exp4:
-        usuario = obter_usuario_atual()
-        municipio_usuario = obter_municipio_usuario()
-
-        pdf_bytes = gerar_relatorio_tecnico_pdf(
-            nome_agravo=nome_agravo,
-            usuario=usuario.get("nome", usuario.get("usuario", "Não informado")),
-            municipio=municipio_usuario,
-            total_registros=total,
-            total_colunas=colunas_qtd,
-            score_qualidade=score,
-            classificacao_qualidade=qualidade,
-            duplicidades=duplicidades_qtd,
-            coluna_data=colunas["data"] or "",
-            coluna_municipio=colunas["municipio"] or "",
-            coluna_unidade=colunas["unidade"] or "",
-            estrutura_campos=estrutura,
-            colunas_vazias=auditoria.get("colunas_vazias", pd.DataFrame()),
-            inconsistencias=inconsistencias,
-            resumo_extra=montar_observacoes_automaticas(alertas_df),
-        )
-
         st.download_button(
-            "Gerar relatório PDF",
-            data=pdf_bytes,
+            "Gerar relatório técnico PDF",
+            data=relatorio_pdf,
             file_name="relatorio_tecnico_horizonte.pdf",
             mime="application/pdf",
             use_container_width=True
