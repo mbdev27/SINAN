@@ -1,3 +1,12 @@
+try:
+    from utils.historico_uploads import (
+        migrar_historico_uploads_local_para_supabase,
+        historico_para_dataframe,
+    )
+except Exception:
+    migrar_historico_uploads_local_para_supabase = None
+    historico_para_dataframe = None
+    
 import pandas as pd
 import streamlit as st
 
@@ -824,6 +833,73 @@ if eh_admin:
 
         st.markdown("---")
         st.markdown("### Status dos módulos")
+
+                st.markdown("---")
+        st.markdown("### Migração do histórico de uploads para Supabase")
+
+        st.info(
+            "Esta ação copia o histórico local de uploads para a tabela "
+            "`historico_uploads` no Supabase. A partir desta etapa, novos uploads "
+            "já passam a ser registrados preferencialmente no banco profissional."
+        )
+
+        if migrar_historico_uploads_local_para_supabase is None:
+            st.error("Função de migração do histórico não localizada.")
+
+        else:
+            confirmar_migracao_uploads = st.checkbox(
+                "Confirmo que desejo migrar o histórico local de uploads para o Supabase."
+            )
+
+            if st.button(
+                "Migrar histórico de uploads para Supabase",
+                use_container_width=True
+            ):
+                if not confirmar_migracao_uploads:
+                    st.error("Confirme a migração antes de continuar.")
+
+                else:
+                    try:
+                        resultado_uploads = migrar_historico_uploads_local_para_supabase()
+
+                        st.success(
+                            f"Migração concluída. "
+                            f"Lidos: {resultado_uploads['total_lidos']} • "
+                            f"Migrados: {resultado_uploads['migrados']} • "
+                            f"Erros: {resultado_uploads['erros']}"
+                        )
+
+                        st.dataframe(
+                            pd.DataFrame(resultado_uploads["detalhes"]),
+                            use_container_width=True
+                        )
+
+                    except Exception as e:
+                        st.error("Erro durante a migração do histórico.")
+                        st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Histórico de uploads registrado")
+
+        if historico_para_dataframe is None:
+            st.warning("Leitura do histórico de uploads não disponível.")
+
+        else:
+            try:
+                df_historico_uploads = historico_para_dataframe()
+
+                if df_historico_uploads.empty:
+                    st.info("Nenhum upload registrado ainda.")
+                else:
+                    st.dataframe(
+                        df_historico_uploads,
+                        use_container_width=True,
+                        height=360
+                    )
+
+            except Exception as e:
+                st.error("Não foi possível carregar o histórico de uploads.")
+                st.exception(e)
 
         status_modulos = pd.DataFrame([
             {
