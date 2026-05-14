@@ -18,9 +18,15 @@ from utils.auth import (
 from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
 
 try:
-    from utils.supabase_client import testar_conexao_supabase
+    from utils.supabase_client import (
+        testar_conexao_supabase,
+        listar_usuarios_supabase,
+        migrar_usuarios_locais_para_supabase,
+    )
 except Exception:
     testar_conexao_supabase = None
+    listar_usuarios_supabase = None
+    migrar_usuarios_locais_para_supabase = None
 
 
 st.set_page_config(
@@ -92,6 +98,10 @@ if eh_admin:
     aba_admin = abas_renderizadas[3]
     aba_diagnostico = abas_renderizadas[4]
 
+
+# ============================================================
+# ABA: MINHA CONTA
+# ============================================================
 
 with aba_conta:
     st.subheader("👤 Dados cadastrais")
@@ -195,6 +205,10 @@ with aba_conta:
                 st.error("Não foi possível salvar as alterações.")
 
 
+# ============================================================
+# ABA: SEGURANÇA
+# ============================================================
+
 with aba_seguranca:
     st.subheader("🔐 Segurança e acesso")
 
@@ -260,6 +274,10 @@ with aba_seguranca:
     else:
         st.info("Ainda não há histórico de acesso registrado.")
 
+
+# ============================================================
+# ABA: LGPD
+# ============================================================
 
 with aba_lgpd:
     st.subheader("📜 Termos de uso e LGPD")
@@ -333,6 +351,10 @@ with aba_lgpd:
                 st.error("Não foi possível registrar a solicitação.")
 
 
+# ============================================================
+# ABA: ADMINISTRAÇÃO
+# ============================================================
+
 if eh_admin:
     with aba_admin:
         st.subheader("🛡️ Administração de usuários")
@@ -361,14 +383,17 @@ if eh_admin:
         k1, k2, k3, k4 = st.columns(4)
 
         k1.metric("Total de usuários", len(df_usuarios))
+
         k2.metric(
             "Administradores",
             len(df_usuarios[df_usuarios["Perfil"] == "Admin"])
         )
+
         k3.metric(
             "Bloqueados",
             len(df_usuarios[df_usuarios["Bloqueado"] == "🔒 Sim"])
         )
+
         k4.metric(
             "Sem LGPD",
             len(df_usuarios[df_usuarios["LGPD"] == "❌ Não"])
@@ -681,6 +706,10 @@ if eh_admin:
         )
 
 
+# ============================================================
+# ABA: DIAGNÓSTICO
+# ============================================================
+
 if eh_admin:
     with aba_diagnostico:
         st.subheader("🧪 Diagnóstico da plataforma")
@@ -720,6 +749,77 @@ if eh_admin:
 
                 except Exception as e:
                     st.error("Não foi possível conectar ao Supabase.")
+                    st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Migração de usuários locais para Supabase")
+
+        st.info(
+            "Esta ação copia os usuários atuais do sistema local/JSON para a tabela "
+            "`usuarios` no Supabase. Ela ainda não troca o sistema de login; apenas "
+            "prepara a base profissional."
+        )
+
+        if migrar_usuarios_locais_para_supabase is None:
+            st.error("Função de migração não localizada.")
+
+        else:
+            confirmar_migracao = st.checkbox(
+                "Confirmo que desejo migrar/atualizar os usuários locais no Supabase."
+            )
+
+            if st.button(
+                "Migrar usuários locais para Supabase",
+                use_container_width=True
+            ):
+                if not confirmar_migracao:
+                    st.error("Confirme a migração antes de continuar.")
+
+                else:
+                    try:
+                        resultado = migrar_usuarios_locais_para_supabase()
+
+                        st.success(
+                            f"Migração concluída. "
+                            f"Lidos: {resultado['total_lidos']} • "
+                            f"Migrados/atualizados: {resultado['migrados']} • "
+                            f"Erros: {resultado['erros']}"
+                        )
+
+                        st.dataframe(
+                            pd.DataFrame(resultado["detalhes"]),
+                            use_container_width=True
+                        )
+
+                    except Exception as e:
+                        st.error("Erro durante a migração.")
+                        st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Usuários atualmente no Supabase")
+
+        if listar_usuarios_supabase is None:
+            st.warning("Listagem de usuários Supabase não disponível.")
+
+        else:
+            if st.button(
+                "Carregar usuários do Supabase",
+                use_container_width=True
+            ):
+                try:
+                    usuarios_supabase = listar_usuarios_supabase()
+
+                    if usuarios_supabase:
+                        st.dataframe(
+                            pd.DataFrame(usuarios_supabase),
+                            use_container_width=True,
+                            height=360
+                        )
+                    else:
+                        st.info("Nenhum usuário encontrado no Supabase.")
+
+                except Exception as e:
+                    st.error("Não foi possível listar os usuários do Supabase.")
                     st.exception(e)
 
         st.markdown("---")
