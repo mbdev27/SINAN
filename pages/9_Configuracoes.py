@@ -37,6 +37,15 @@ except Exception:
     migrar_historico_uploads_local_para_supabase = None
     historico_para_dataframe = None
 
+try:
+    from utils.referencias_ibge import (
+        importar_municipios_ibge_para_supabase,
+        municipios_para_dataframe,
+    )
+except Exception:
+    importar_municipios_ibge_para_supabase = None
+    municipios_para_dataframe = None
+
 
 st.set_page_config(
     page_title="Configurações",
@@ -70,16 +79,13 @@ st.caption(
     "Horizonte Health Intelligence • Conta, preferências, LGPD, administração e diagnóstico técnico."
 )
 
-
 usuarios = carregar_usuarios()
 
 if login_atual not in usuarios:
     st.error("Usuário atual não localizado na base.")
     st.stop()
 
-
 dados_meu_usuario = dict(usuarios[login_atual])
-
 
 if eh_admin:
     abas = [
@@ -96,7 +102,6 @@ else:
         "📜 LGPD",
     ]
 
-
 abas_renderizadas = st.tabs(abas)
 
 aba_conta = abas_renderizadas[0]
@@ -109,7 +114,7 @@ if eh_admin:
 
 
 # ============================================================
-# ABA: MINHA CONTA
+# MINHA CONTA
 # ============================================================
 
 with aba_conta:
@@ -206,8 +211,6 @@ with aba_conta:
             )
 
             if ok:
-                st.session_state["nome_usuario"] = novo_nome
-                st.session_state["tema_usuario"] = tema
                 st.success("Dados atualizados com sucesso.")
                 st.rerun()
             else:
@@ -215,7 +218,7 @@ with aba_conta:
 
 
 # ============================================================
-# ABA: SEGURANÇA
+# SEGURANÇA
 # ============================================================
 
 with aba_seguranca:
@@ -270,55 +273,24 @@ with aba_seguranca:
             else:
                 st.error("Não foi possível alterar a senha.")
 
-    st.markdown("### Histórico de acessos")
-
-    historico = dados_meu_usuario.get("historico_acessos", [])
-
-    if historico:
-        st.dataframe(
-            pd.DataFrame({"Data/hora de acesso": historico[::-1]}),
-            use_container_width=True,
-            height=300
-        )
-    else:
-        st.info("Ainda não há histórico de acesso registrado.")
-
 
 # ============================================================
-# ABA: LGPD
+# LGPD
 # ============================================================
 
 with aba_lgpd:
     st.subheader("📜 Termos de uso e LGPD")
 
-    st.info(
-        "Esta plataforma trata dados operacionais e epidemiológicos para fins de "
-        "análise, auditoria, qualificação da informação e apoio à decisão em saúde pública."
-    )
-
-    aceitou_lgpd = dados_meu_usuario.get("aceitou_lgpd", False)
-    data_aceite = dados_meu_usuario.get("data_aceite_lgpd", "")
-
-    if aceitou_lgpd:
-        st.success(
-            f"Termo aceito. Data do aceite: {data_aceite or 'não registrada'}"
-        )
-    else:
-        st.warning("Você ainda não registrou aceite do termo de uso/LGPD.")
-
     aceite = st.checkbox(
-        "Li e aceito os termos de uso, privacidade e tratamento de dados da plataforma.",
-        value=bool(aceitou_lgpd)
+        "Li e aceito os termos de uso e privacidade.",
+        value=bool(dados_meu_usuario.get("aceitou_lgpd", False))
     )
 
-    if st.button("✅ Salvar aceite LGPD", use_container_width=True):
+    if st.button("Salvar aceite LGPD", use_container_width=True):
         dados_meu_usuario["aceitou_lgpd"] = bool(aceite)
 
-        if aceite and not dados_meu_usuario.get("data_aceite_lgpd"):
+        if aceite:
             dados_meu_usuario["data_aceite_lgpd"] = agora_iso()
-
-        if not aceite:
-            dados_meu_usuario["data_aceite_lgpd"] = ""
 
         ok = salvar_usuario_runtime(
             login_atual,
@@ -326,26 +298,23 @@ with aba_lgpd:
         )
 
         if ok:
-            st.success("Preferência de LGPD salva.")
+            st.success("LGPD atualizado.")
             st.rerun()
-        else:
-            st.error("Não foi possível salvar.")
 
     st.markdown("---")
     st.subheader("🗑️ Solicitar exclusão da conta")
 
     motivo_exclusao = st.text_area(
-        "Motivo da solicitação",
-        placeholder="Descreva brevemente o motivo da solicitação."
+        "Motivo da solicitação"
     )
 
     confirmar_exclusao = st.checkbox(
-        "Confirmo que desejo solicitar a exclusão da minha conta."
+        "Confirmo que desejo solicitar a exclusão."
     )
 
-    if st.button("Solicitar exclusão da conta", use_container_width=True):
+    if st.button("Solicitar exclusão", use_container_width=True):
         if not confirmar_exclusao:
-            st.error("Confirme a solicitação antes de continuar.")
+            st.error("Confirme a solicitação.")
         else:
             ok = registrar_solicitacao_exclusao(
                 login_atual,
@@ -353,22 +322,16 @@ with aba_lgpd:
             )
 
             if ok:
-                st.success(
-                    "Solicitação registrada. Um administrador deverá avaliar o pedido."
-                )
-            else:
-                st.error("Não foi possível registrar a solicitação.")
+                st.success("Solicitação registrada.")
 
 
 # ============================================================
-# ABA: ADMINISTRAÇÃO
+# ADMINISTRAÇÃO
 # ============================================================
 
 if eh_admin:
     with aba_admin:
         st.subheader("🛡️ Administração de usuários")
-
-        usuarios = carregar_usuarios()
 
         linhas = []
 
@@ -376,367 +339,34 @@ if eh_admin:
             linhas.append({
                 "Usuário": login,
                 "Nome": dados.get("nome", ""),
+                "Perfil": dados.get("perfil", ""),
                 "E-mail": dados.get("email", ""),
                 "Município": dados.get("municipio", ""),
-                "Instituição": dados.get("instituicao", ""),
-                "Cargo": dados.get("cargo", ""),
-                "Perfil": dados.get("perfil", "Usuário"),
-                "Último acesso": dados.get("ultimo_acesso", ""),
-                "LGPD": "✅ Sim" if dados.get("aceitou_lgpd", False) else "❌ Não",
-                "Verificado": "✅ Sim" if dados.get("verificado", False) else "❌ Não",
-                "Bloqueado": "🔒 Sim" if dados.get("bloqueado", False) else "🔓 Não",
+                "Verificado": dados.get("verificado", False),
+                "Bloqueado": dados.get("bloqueado", False),
             })
 
         df_usuarios = pd.DataFrame(linhas)
 
-        k1, k2, k3, k4 = st.columns(4)
-
-        k1.metric("Total de usuários", len(df_usuarios))
-
-        k2.metric(
-            "Administradores",
-            len(df_usuarios[df_usuarios["Perfil"] == "Admin"])
-        )
-
-        k3.metric(
-            "Bloqueados",
-            len(df_usuarios[df_usuarios["Bloqueado"] == "🔒 Sim"])
-        )
-
-        k4.metric(
-            "Sem LGPD",
-            len(df_usuarios[df_usuarios["LGPD"] == "❌ Não"])
-        )
-
         st.dataframe(
             df_usuarios,
             use_container_width=True,
-            height=420
-        )
-
-        st.markdown("---")
-        st.subheader("⚙️ Editar usuário")
-
-        lista_usuarios = list(usuarios.keys())
-
-        usuario_selecionado = st.selectbox(
-            "Selecione o usuário",
-            lista_usuarios
-        )
-
-        dados_usuario = dict(usuarios[usuario_selecionado])
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            nome = st.text_input(
-                "Nome do usuário selecionado",
-                value=dados_usuario.get("nome", "")
-            )
-
-            email = st.text_input(
-                "E-mail do usuário selecionado",
-                value=dados_usuario.get("email", "")
-            )
-
-            municipio_admin = st.text_input(
-                "Município do usuário",
-                value=dados_usuario.get("municipio", "")
-            )
-
-            instituicao_admin = st.text_input(
-                "Instituição do usuário",
-                value=dados_usuario.get("instituicao", "")
-            )
-
-            cargo_admin = st.text_input(
-                "Cargo do usuário",
-                value=dados_usuario.get("cargo", "")
-            )
-
-            funcao_admin = st.text_input(
-                "Função do usuário",
-                value=dados_usuario.get("funcao", "")
-            )
-
-            perfis = [
-                "Admin",
-                "Gestor",
-                "Técnico",
-                "Demo",
-                "Usuário"
-            ]
-
-            perfil = dados_usuario.get("perfil", "Usuário")
-
-            if perfil not in perfis:
-                perfil = "Usuário"
-
-            novo_perfil = st.selectbox(
-                "Perfil",
-                perfis,
-                index=perfis.index(perfil)
-            )
-
-        with col2:
-            verificado = st.checkbox(
-                "E-mail verificado",
-                value=bool(dados_usuario.get("verificado", False))
-            )
-
-            bloqueado = st.checkbox(
-                "Usuário bloqueado",
-                value=bool(dados_usuario.get("bloqueado", False))
-            )
-
-            lgpd_admin = st.checkbox(
-                "LGPD aceita",
-                value=bool(dados_usuario.get("aceitou_lgpd", False))
-            )
-
-            tema_atual_admin = dados_usuario.get("tema", "Escuro")
-
-            if tema_atual_admin not in ["Escuro", "Claro", "Automático"]:
-                tema_atual_admin = "Escuro"
-
-            tema_admin = st.selectbox(
-                "Tema do usuário",
-                ["Escuro", "Claro", "Automático"],
-                index=["Escuro", "Claro", "Automático"].index(tema_atual_admin)
-            )
-
-            senha_manual = st.text_input(
-                "Nova senha manual",
-                type="password"
-            )
-
-        b1, b2, b3 = st.columns(3)
-
-        with b1:
-            if st.button("💾 Salvar usuário", use_container_width=True):
-                dados_usuario["nome"] = nome
-                dados_usuario["email"] = email
-                dados_usuario["municipio"] = municipio_admin
-                dados_usuario["instituicao"] = instituicao_admin
-                dados_usuario["cargo"] = cargo_admin
-                dados_usuario["funcao"] = funcao_admin
-                dados_usuario["perfil"] = novo_perfil
-                dados_usuario["verificado"] = verificado
-                dados_usuario["bloqueado"] = bloqueado
-                dados_usuario["aceitou_lgpd"] = lgpd_admin
-                dados_usuario["tema"] = tema_admin
-
-                if lgpd_admin and not dados_usuario.get("data_aceite_lgpd"):
-                    dados_usuario["data_aceite_lgpd"] = agora_iso()
-
-                if senha_manual:
-                    dados_usuario["senha"] = senha_manual
-
-                ok = salvar_usuario_runtime(
-                    usuario_selecionado,
-                    dados_usuario
-                )
-
-                if ok:
-                    st.success("Usuário atualizado.")
-                    st.rerun()
-                else:
-                    st.error("Não foi possível salvar.")
-
-        with b2:
-            if st.button("🔓 Desbloquear e verificar", use_container_width=True):
-                dados_usuario["bloqueado"] = False
-                dados_usuario["verificado"] = True
-
-                ok = salvar_usuario_runtime(
-                    usuario_selecionado,
-                    dados_usuario
-                )
-
-                if ok:
-                    st.success("Usuário desbloqueado e verificado.")
-                    st.rerun()
-                else:
-                    st.error("Não foi possível atualizar.")
-
-        with b3:
-            if usuario_selecionado != login_atual:
-                if st.button("🗑️ Excluir usuário", use_container_width=True):
-                    ok = excluir_usuario_runtime(usuario_selecionado)
-
-                    if ok:
-                        st.success("Usuário excluído.")
-                        st.rerun()
-                    else:
-                        st.warning("Não foi possível excluir.")
-            else:
-                st.info("Você não pode excluir o próprio usuário.")
-
-        st.markdown("---")
-        st.subheader("➕ Criar usuário manualmente")
-
-        with st.form("form_criar_usuario_admin", clear_on_submit=True):
-            novo_nome_admin = st.text_input("Nome completo")
-            novo_email_admin = st.text_input("E-mail")
-            novo_usuario_admin = st.text_input("Usuário")
-            novo_municipio_admin = st.text_input("Município")
-            novo_instituicao_admin = st.text_input("Instituição")
-            novo_cargo_admin = st.text_input("Cargo")
-            novo_funcao_admin = st.text_input("Função")
-
-            novo_perfil_admin = st.selectbox(
-                "Perfil",
-                [
-                    "Admin",
-                    "Gestor",
-                    "Técnico",
-                    "Demo",
-                    "Usuário"
-                ],
-                index=3
-            )
-
-            senha_inicial = st.text_input(
-                "Senha inicial",
-                type="password"
-            )
-
-            criar = st.form_submit_button(
-                "Criar usuário",
-                use_container_width=True
-            )
-
-            if criar:
-                usuarios_existentes = carregar_usuarios()
-                novo_usuario_admin = str(novo_usuario_admin).strip()
-
-                if (
-                    not novo_nome_admin
-                    or not novo_email_admin
-                    or not novo_usuario_admin
-                    or not senha_inicial
-                ):
-                    st.error("Preencha nome, e-mail, usuário e senha.")
-
-                elif "@" not in novo_email_admin:
-                    st.error("Informe um e-mail válido.")
-
-                elif novo_usuario_admin in usuarios_existentes:
-                    st.error("Este usuário já existe.")
-
-                else:
-                    ok = salvar_usuario_runtime(
-                        novo_usuario_admin,
-                        {
-                            "senha": senha_inicial,
-                            "nome": novo_nome_admin,
-                            "perfil": novo_perfil_admin,
-                            "email": novo_email_admin,
-                            "municipio": novo_municipio_admin,
-                            "instituicao": novo_instituicao_admin,
-                            "cargo": novo_cargo_admin,
-                            "funcao": novo_funcao_admin,
-                            "tema": "Escuro",
-                            "aceitou_lgpd": False,
-                            "data_aceite_lgpd": "",
-                            "avatar_path": "",
-                            "ultimo_acesso": "",
-                            "historico_acessos": [],
-                            "verificado": True,
-                            "bloqueado": False,
-                        }
-                    )
-
-                    if ok:
-                        st.success("Usuário criado com sucesso.")
-                        st.rerun()
-                    else:
-                        st.error("Não foi possível criar o usuário.")
-
-        st.markdown("---")
-        st.subheader("📄 Solicitações de exclusão")
-
-        solicitacoes = carregar_solicitacoes_exclusao()
-
-        if solicitacoes:
-            df_solicitacoes = pd.DataFrame(solicitacoes)
-
-            st.dataframe(
-                df_solicitacoes,
-                use_container_width=True,
-                height=300
-            )
-
-            indice = st.number_input(
-                "Índice da solicitação para atualizar",
-                min_value=0,
-                max_value=max(len(solicitacoes) - 1, 0),
-                value=0
-            )
-
-            status = st.selectbox(
-                "Novo status",
-                [
-                    "Pendente",
-                    "Em análise",
-                    "Concluída",
-                    "Negada"
-                ]
-            )
-
-            if st.button(
-                "Atualizar status da solicitação",
-                use_container_width=True
-            ):
-                ok = atualizar_status_solicitacao_exclusao(
-                    int(indice),
-                    status
-                )
-
-                if ok:
-                    st.success("Solicitação atualizada.")
-                    st.rerun()
-                else:
-                    st.error("Não foi possível atualizar.")
-        else:
-            st.info("Nenhuma solicitação de exclusão registrada.")
-
-        st.markdown("---")
-        st.subheader("📥 Exportar usuários")
-
-        csv_usuarios = df_usuarios.to_csv(index=False).encode("utf-8")
-
-        st.download_button(
-            "📄 Baixar lista de usuários",
-            data=csv_usuarios,
-            file_name="usuarios_horizonte.csv",
-            mime="text/csv",
-            use_container_width=True
+            height=400
         )
 
 
 # ============================================================
-# ABA: DIAGNÓSTICO
+# DIAGNÓSTICO
 # ============================================================
 
 if eh_admin:
     with aba_diagnostico:
         st.subheader("🧪 Diagnóstico da plataforma")
 
-        st.info(
-            "Esta área reúne testes técnicos da infraestrutura da Horizonte. "
-            "Somente administradores têm acesso."
-        )
-
         st.markdown("### Supabase/PostgreSQL")
 
-        if testar_conexao_supabase is None:
-            st.error(
-                "O módulo de conexão com Supabase não foi localizado. "
-                "Verifique se o arquivo `utils/supabase_client.py` existe."
-            )
+        if testar_conexao_supabase is not None:
 
-        else:
             if st.button(
                 "Testar conexão com Supabase",
                 use_container_width=True
@@ -744,196 +374,199 @@ if eh_admin:
                 try:
                     dados = testar_conexao_supabase()
 
-                    st.success("Conexão com Supabase realizada com sucesso!")
+                    st.success("Conexão realizada com sucesso.")
 
-                    if dados:
-                        st.dataframe(
-                            pd.DataFrame(dados),
-                            use_container_width=True
-                        )
-                    else:
-                        st.warning(
-                            "A conexão funcionou, mas a tabela `usuarios` não retornou registros."
-                        )
+                    st.dataframe(
+                        pd.DataFrame(dados),
+                        use_container_width=True
+                    )
 
                 except Exception as e:
-                    st.error("Não foi possível conectar ao Supabase.")
+                    st.error("Erro ao conectar.")
                     st.exception(e)
 
         st.markdown("---")
-        st.markdown("### Migração de usuários locais para Supabase")
+        st.markdown("### Usuários no Supabase")
 
-        st.info(
-            "Esta ação copia os usuários atuais do sistema local/JSON para a tabela "
-            "`usuarios` no Supabase. Ela ainda não troca o sistema de login; apenas "
-            "prepara a base profissional."
-        )
+        if listar_usuarios_supabase is not None:
 
-        if migrar_usuarios_locais_para_supabase is None:
-            st.error("Função de migração não localizada.")
-
-        else:
-            confirmar_migracao = st.checkbox(
-                "Confirmo que desejo migrar/atualizar os usuários locais no Supabase."
-            )
-
-            if st.button(
-                "Migrar usuários locais para Supabase",
-                use_container_width=True
-            ):
-                if not confirmar_migracao:
-                    st.error("Confirme a migração antes de continuar.")
-
-                else:
-                    try:
-                        resultado = migrar_usuarios_locais_para_supabase()
-
-                        st.success(
-                            f"Migração concluída. "
-                            f"Lidos: {resultado['total_lidos']} • "
-                            f"Migrados/atualizados: {resultado['migrados']} • "
-                            f"Erros: {resultado['erros']}"
-                        )
-
-                        st.dataframe(
-                            pd.DataFrame(resultado["detalhes"]),
-                            use_container_width=True
-                        )
-
-                    except Exception as e:
-                        st.error("Erro durante a migração.")
-                        st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Usuários atualmente no Supabase")
-
-        if listar_usuarios_supabase is None:
-            st.warning("Listagem de usuários Supabase não disponível.")
-
-        else:
             if st.button(
                 "Carregar usuários do Supabase",
                 use_container_width=True
             ):
                 try:
-                    usuarios_supabase = listar_usuarios_supabase()
+                    dados = listar_usuarios_supabase()
 
-                    if usuarios_supabase:
-                        st.dataframe(
-                            pd.DataFrame(usuarios_supabase),
-                            use_container_width=True,
-                            height=360
-                        )
-                    else:
-                        st.info("Nenhum usuário encontrado no Supabase.")
-
-                except Exception as e:
-                    st.error("Não foi possível listar os usuários do Supabase.")
-                    st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Migração do histórico de uploads para Supabase")
-
-        st.info(
-            "Esta ação copia o histórico local de uploads para a tabela "
-            "`historico_uploads` no Supabase. A partir desta etapa, novos uploads "
-            "já passam a ser registrados preferencialmente no banco profissional."
-        )
-
-        if migrar_historico_uploads_local_para_supabase is None:
-            st.error("Função de migração do histórico não localizada.")
-
-        else:
-            confirmar_migracao_uploads = st.checkbox(
-                "Confirmo que desejo migrar o histórico local de uploads para o Supabase."
-            )
-
-            if st.button(
-                "Migrar histórico de uploads para Supabase",
-                use_container_width=True
-            ):
-                if not confirmar_migracao_uploads:
-                    st.error("Confirme a migração antes de continuar.")
-
-                else:
-                    try:
-                        resultado_uploads = migrar_historico_uploads_local_para_supabase()
-
-                        st.success(
-                            f"Migração concluída. "
-                            f"Lidos: {resultado_uploads['total_lidos']} • "
-                            f"Migrados: {resultado_uploads['migrados']} • "
-                            f"Erros: {resultado_uploads['erros']}"
-                        )
-
-                        st.dataframe(
-                            pd.DataFrame(resultado_uploads["detalhes"]),
-                            use_container_width=True
-                        )
-
-                    except Exception as e:
-                        st.error("Erro durante a migração do histórico.")
-                        st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Histórico de uploads registrado")
-
-        if historico_para_dataframe is None:
-            st.warning("Leitura do histórico de uploads não disponível.")
-
-        else:
-            try:
-                df_historico_uploads = historico_para_dataframe()
-
-                if df_historico_uploads.empty:
-                    st.info("Nenhum upload registrado ainda.")
-                else:
                     st.dataframe(
-                        df_historico_uploads,
+                        pd.DataFrame(dados),
                         use_container_width=True,
                         height=360
                     )
 
+                except Exception as e:
+                    st.error("Erro ao carregar usuários.")
+                    st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Migração de usuários")
+
+        confirmar_migracao = st.checkbox(
+            "Confirmo a migração dos usuários locais."
+        )
+
+        if st.button(
+            "Migrar usuários locais para Supabase",
+            use_container_width=True
+        ):
+            if not confirmar_migracao:
+                st.error("Confirme antes de continuar.")
+            else:
+                try:
+                    resultado = migrar_usuarios_locais_para_supabase()
+
+                    st.success(
+                        f"Migrados: {resultado['migrados']} | "
+                        f"Erros: {resultado['erros']}"
+                    )
+
+                    st.dataframe(
+                        pd.DataFrame(resultado["detalhes"]),
+                        use_container_width=True
+                    )
+
+                except Exception as e:
+                    st.error("Erro na migração.")
+                    st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Histórico de uploads")
+
+        if historico_para_dataframe is not None:
+
+            try:
+                df_historico = historico_para_dataframe()
+
+                st.dataframe(
+                    df_historico,
+                    use_container_width=True,
+                    height=360
+                )
+
             except Exception as e:
-                st.error("Não foi possível carregar o histórico de uploads.")
+                st.error("Erro ao carregar histórico.")
+                st.exception(e)
+
+        confirmar_uploads = st.checkbox(
+            "Confirmo a migração do histórico de uploads."
+        )
+
+        if st.button(
+            "Migrar histórico de uploads",
+            use_container_width=True
+        ):
+            if not confirmar_uploads:
+                st.error("Confirme antes de continuar.")
+            else:
+                try:
+                    resultado_uploads = (
+                        migrar_historico_uploads_local_para_supabase()
+                    )
+
+                    st.success(
+                        f"Migrados: {resultado_uploads['migrados']} | "
+                        f"Erros: {resultado_uploads['erros']}"
+                    )
+
+                    st.dataframe(
+                        pd.DataFrame(resultado_uploads["detalhes"]),
+                        use_container_width=True
+                    )
+
+                except Exception as e:
+                    st.error("Erro na migração.")
+                    st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Municípios do Brasil — IBGE")
+
+        if importar_municipios_ibge_para_supabase is not None:
+
+            confirmar_importacao = st.checkbox(
+                "Confirmo a importação dos municípios IBGE."
+            )
+
+            if st.button(
+                "Importar municípios do IBGE",
+                use_container_width=True
+            ):
+                if not confirmar_importacao:
+                    st.error("Confirme antes de continuar.")
+                else:
+                    try:
+                        resultado = (
+                            importar_municipios_ibge_para_supabase()
+                        )
+
+                        st.success(
+                            f"Importados: {resultado['importados']} | "
+                            f"Erros: {resultado['erros']}"
+                        )
+
+                        st.dataframe(
+                            pd.DataFrame(resultado["detalhes"]),
+                            use_container_width=True,
+                            height=360
+                        )
+
+                    except Exception as e:
+                        st.error("Erro na importação.")
+                        st.exception(e)
+
+        st.markdown("#### Municípios cadastrados")
+
+        if municipios_para_dataframe is not None:
+            try:
+                df_municipios = municipios_para_dataframe()
+
+                st.dataframe(
+                    df_municipios,
+                    use_container_width=True,
+                    height=360
+                )
+
+            except Exception as e:
+                st.error("Erro ao carregar municípios.")
                 st.exception(e)
 
         st.markdown("---")
-        st.markdown("### Status dos módulos")
 
         status_modulos = pd.DataFrame([
             {
                 "Módulo": "Autenticação",
-                "Status": "Em migração",
-                "Observação": "Supabase/PostgreSQL em uso preferencial, com fallback local."
-            },
-            {
-                "Módulo": "Supabase",
                 "Status": "Ativo",
-                "Observação": "Conexão criada e diagnóstico disponível."
+                "Observação": "Supabase integrado."
             },
             {
                 "Módulo": "Histórico de uploads",
-                "Status": "Em migração",
-                "Observação": "Novo registro usa Supabase preferencialmente, com fallback local."
+                "Status": "Ativo",
+                "Observação": "Persistência híbrida funcionando."
             },
             {
-                "Módulo": "Relatórios PDF",
+                "Módulo": "Municípios IBGE",
                 "Status": "Ativo",
-                "Observação": "Resumo executivo e relatório técnico funcionando."
+                "Observação": "Importação automática habilitada."
             },
             {
                 "Módulo": "Alertas inteligentes",
                 "Status": "Ativo",
-                "Observação": "Integrado ao Painel Universal SINAN."
+                "Observação": "Integrado ao Painel Universal."
             },
         ])
 
         st.dataframe(
             status_modulos,
             use_container_width=True,
-            height=260
+            height=240
         )
-
 
 st.caption("Horizonte Health Intelligence • Configurações")
