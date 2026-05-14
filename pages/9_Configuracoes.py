@@ -394,174 +394,39 @@ if eh_admin:
                     st.exception(e)
 
         st.markdown("---")
-        st.markdown("### Usuários no Supabase")
-
-        if listar_usuarios_supabase is not None:
-
-            if st.button(
-                "Carregar usuários do Supabase",
-                use_container_width=True
-            ):
-                try:
-                    dados = listar_usuarios_supabase()
-
-                    st.dataframe(
-                        pd.DataFrame(dados),
-                        use_container_width=True,
-                        height=360
-                    )
-
-                except Exception as e:
-                    st.error("Erro ao carregar usuários.")
-                    st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Migração de usuários")
-
-        confirmar_migracao = st.checkbox(
-            "Confirmo a migração dos usuários locais."
-        )
-
-        if st.button(
-            "Migrar usuários locais para Supabase",
-            use_container_width=True
-        ):
-            if not confirmar_migracao:
-                st.error("Confirme antes de continuar.")
-            else:
-                try:
-                    resultado = migrar_usuarios_locais_para_supabase()
-
-                    st.success(
-                        f"Migrados: {resultado['migrados']} | "
-                        f"Erros: {resultado['erros']}"
-                    )
-
-                    st.dataframe(
-                        pd.DataFrame(resultado["detalhes"]),
-                        use_container_width=True
-                    )
-
-                except Exception as e:
-                    st.error("Erro na migração.")
-                    st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Histórico de uploads")
-
-        if historico_para_dataframe is not None:
-
-            try:
-                df_historico = historico_para_dataframe()
-
-                st.dataframe(
-                    df_historico,
-                    use_container_width=True,
-                    height=360
-                )
-
-            except Exception as e:
-                st.error("Erro ao carregar histórico.")
-                st.exception(e)
-
-        confirmar_uploads = st.checkbox(
-            "Confirmo a migração do histórico de uploads."
-        )
-
-        if st.button(
-            "Migrar histórico de uploads",
-            use_container_width=True
-        ):
-            if not confirmar_uploads:
-                st.error("Confirme antes de continuar.")
-            else:
-                try:
-                    resultado_uploads = (
-                        migrar_historico_uploads_local_para_supabase()
-                    )
-
-                    st.success(
-                        f"Migrados: {resultado_uploads['migrados']} | "
-                        f"Erros: {resultado_uploads['erros']}"
-                    )
-
-                    st.dataframe(
-                        pd.DataFrame(resultado_uploads["detalhes"]),
-                        use_container_width=True
-                    )
-
-                except Exception as e:
-                    st.error("Erro na migração.")
-                    st.exception(e)
-
-        st.markdown("---")
-        st.markdown("### Municípios do Brasil — IBGE")
-
-        if importar_municipios_ibge_para_supabase is not None:
-
-            confirmar_importacao = st.checkbox(
-                "Confirmo a importação dos municípios IBGE."
-            )
-
-            if st.button(
-                "Importar municípios do IBGE",
-                use_container_width=True
-            ):
-                if not confirmar_importacao:
-                    st.error("Confirme antes de continuar.")
-                else:
-                    try:
-                        resultado = (
-                            importar_municipios_ibge_para_supabase()
-                        )
-
-                        st.success(
-                            f"Importados: {resultado['importados']} | "
-                            f"Erros: {resultado['erros']}"
-                        )
-
-                        st.dataframe(
-                            pd.DataFrame(resultado["detalhes"]),
-                            use_container_width=True,
-                            height=360
-                        )
-
-                    except Exception as e:
-                        st.error("Erro na importação.")
-                        st.exception(e)
-
-        st.markdown("#### Municípios cadastrados")
-
-        if municipios_para_dataframe is not None:
-            try:
-                df_municipios = municipios_para_dataframe()
-
-                st.dataframe(
-                    df_municipios,
-                    use_container_width=True,
-                    height=360
-                )
-
-            except Exception as e:
-                st.error("Erro ao carregar municípios.")
-                st.exception(e)
-
-        st.markdown("---")
         st.markdown("### Bases CNES/DATASUS")
 
+        st.warning(
+            "A importação de estabelecimentos CNES pode envolver arquivos extremamente grandes "
+            "(300 MB, 400 MB ou até mais de 500 MB). "
+            "O processamento ocorre em blocos para evitar travamentos e consumo excessivo de memória."
+        )
+
         st.info(
-            "Atualize aqui as bases de referência do CNES/DATASUS. "
-            "Use os arquivos oficiais `tbMunicipio` e `tbEstabelecimento` em formato CSV."
+            "Use os arquivos oficiais do DATASUS/CNES:\n"
+            "- tbMunicipio\n"
+            "- tbEstabelecimento\n\n"
+            "A plataforma fará atualização incremental automática."
         )
 
         col_cnes1, col_cnes2 = st.columns(2)
 
         with col_cnes1:
+            st.markdown("#### Municípios CNES")
+
             arquivo_municipios_cnes = st.file_uploader(
                 "Upload tbMunicipio CNES/DATASUS",
                 type=["csv"],
                 key="upload_municipios_cnes"
             )
+
+            if arquivo_municipios_cnes is not None:
+                tamanho_mb = round(
+                    arquivo_municipios_cnes.size / (1024 * 1024),
+                    2
+                )
+
+                st.caption(f"Tamanho do arquivo: {tamanho_mb} MB")
 
             if st.button(
                 "Atualizar municípios CNES",
@@ -569,65 +434,131 @@ if eh_admin:
             ):
                 if arquivo_municipios_cnes is None:
                     st.error("Envie o arquivo tbMunicipio em CSV.")
+
                 elif importar_municipios_cnes_csv is None:
-                    st.error("Função de importação de municípios CNES não localizada.")
+                    st.error(
+                        "Função de importação de municípios CNES não localizada."
+                    )
+
                 else:
-                    with st.spinner("Importando municípios CNES..."):
+                    barra = st.progress(0)
+                    status = st.empty()
+
+                    try:
+                        status.info("Iniciando importação dos municípios...")
+
                         resultado = importar_municipios_cnes_csv(
                             arquivo_municipios_cnes
                         )
 
-                    st.success(
-                        f"Importação concluída. "
-                        f"Lidos: {resultado['total_lidos']} • "
-                        f"Importados/atualizados: {resultado['importados']} • "
-                        f"Erros: {resultado['erros']}"
-                    )
+                        barra.progress(100)
 
-                    st.dataframe(
-                        pd.DataFrame(resultado["detalhes"]),
-                        use_container_width=True
-                    )
+                        status.success(
+                            "Importação dos municípios concluída."
+                        )
+
+                        st.success(
+                            f"Lidos: {resultado['total_lidos']} • "
+                            f"Importados/atualizados: {resultado['importados']} • "
+                            f"Erros: {resultado['erros']}"
+                        )
+
+                        st.dataframe(
+                            pd.DataFrame(resultado["detalhes"]),
+                            use_container_width=True
+                        )
+
+                    except Exception as e:
+                        st.error("Erro durante a importação.")
+                        st.exception(e)
 
         with col_cnes2:
+            st.markdown("#### Estabelecimentos CNES")
+
             arquivo_estabelecimentos_cnes = st.file_uploader(
                 "Upload tbEstabelecimento CNES/DATASUS",
                 type=["csv"],
-                key="upload_estabelecimentos_cnes"
+                key="upload_estabelecimentos_cnes",
+                help=(
+                    "Arquivos grandes são suportados. "
+                    "A importação ocorre em blocos para reduzir uso de memória."
+                )
             )
+
+            if arquivo_estabelecimentos_cnes is not None:
+                tamanho_mb = round(
+                    arquivo_estabelecimentos_cnes.size / (1024 * 1024),
+                    2
+                )
+
+                st.caption(
+                    f"Tamanho do arquivo: {tamanho_mb} MB"
+                )
+
+                if tamanho_mb > 500:
+                    st.warning(
+                        "Arquivo muito grande detectado. "
+                        "O processo pode levar vários minutos."
+                    )
 
             if st.button(
                 "Atualizar estabelecimentos CNES",
                 use_container_width=True
             ):
                 if arquivo_estabelecimentos_cnes is None:
-                    st.error("Envie o arquivo tbEstabelecimento em CSV.")
+                    st.error(
+                        "Envie o arquivo tbEstabelecimento em CSV."
+                    )
+
                 elif importar_estabelecimentos_cnes_csv is None:
-                    st.error("Função de importação de estabelecimentos CNES não localizada.")
+                    st.error(
+                        "Função de importação de estabelecimentos CNES não localizada."
+                    )
+
                 else:
-                    with st.spinner(
-                        "Importando estabelecimentos CNES. "
-                        "Esse processo pode demorar por causa do tamanho do arquivo..."
-                    ):
+                    barra = st.progress(0)
+                    status = st.empty()
+
+                    try:
+                        status.info(
+                            "Preparando importação dos estabelecimentos CNES..."
+                        )
+
+                        barra.progress(5)
+
                         resultado = importar_estabelecimentos_cnes_csv(
                             arquivo_estabelecimentos_cnes
                         )
 
-                    st.success(
-                        f"Importação concluída. "
-                        f"Lidos: {resultado['total_lidos']} • "
-                        f"Importados/atualizados: {resultado['importados']} • "
-                        f"Erros: {resultado['erros']}"
-                    )
+                        barra.progress(100)
 
-                    st.dataframe(
-                        pd.DataFrame(resultado["detalhes"]),
-                        use_container_width=True
-                    )
+                        status.success(
+                            "Importação dos estabelecimentos concluída."
+                        )
+
+                        st.success(
+                            f"Lidos: {resultado['total_lidos']} • "
+                            f"Importados/atualizados: {resultado['importados']} • "
+                            f"Erros: {resultado['erros']}"
+                        )
+
+                        st.dataframe(
+                            pd.DataFrame(resultado["detalhes"]),
+                            use_container_width=True
+                        )
+
+                    except Exception as e:
+                        st.error(
+                            "Erro durante a importação dos estabelecimentos."
+                        )
+                        st.exception(e)
 
         if contar_referencias_cnes is not None:
             try:
                 contagens = contar_referencias_cnes()
+
+                st.markdown("---")
+                st.markdown("### Referências CNES carregadas")
 
                 c1, c2 = st.columns(2)
 
@@ -642,7 +573,9 @@ if eh_admin:
                 )
 
             except Exception:
-                st.warning("Não foi possível contar as referências CNES.")
+                st.warning(
+                    "Não foi possível contar as referências CNES."
+                )
 
         st.markdown("---")
 
@@ -665,7 +598,10 @@ if eh_admin:
             {
                 "Módulo": "CNES/DATASUS",
                 "Status": "Ativo",
-                "Observação": "Upload e atualização de referências habilitados."
+                "Observação": (
+                    "Importação incremental de bases nacionais "
+                    "com suporte a arquivos gigantes."
+                )
             },
             {
                 "Módulo": "Alertas inteligentes",
