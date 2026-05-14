@@ -17,6 +17,11 @@ from utils.auth import (
 
 from utils.tema import aplicar_tema_streamlit, aplicar_tema_plotly
 
+try:
+    from utils.supabase_client import testar_conexao_supabase
+except Exception:
+    testar_conexao_supabase = None
+
 
 st.set_page_config(
     page_title="Configurações",
@@ -47,7 +52,7 @@ if st.sidebar.button("🚪 Sair do sistema", use_container_width=True):
 
 st.title("⚙️ Configurações")
 st.caption(
-    "Horizonte Health Intelligence • Conta, preferências, LGPD e administração de usuários."
+    "Horizonte Health Intelligence • Conta, preferências, LGPD, administração e diagnóstico técnico."
 )
 
 
@@ -61,12 +66,31 @@ if login_atual not in usuarios:
 dados_meu_usuario = dict(usuarios[login_atual])
 
 
-aba_conta, aba_seguranca, aba_lgpd, aba_admin = st.tabs([
-    "👤 Minha conta",
-    "🔐 Segurança e acesso",
-    "📜 LGPD",
-    "🛡️ Administração" if eh_admin else "ℹ️ Administração",
-])
+if eh_admin:
+    abas = [
+        "👤 Minha conta",
+        "🔐 Segurança e acesso",
+        "📜 LGPD",
+        "🛡️ Administração",
+        "🧪 Diagnóstico",
+    ]
+else:
+    abas = [
+        "👤 Minha conta",
+        "🔐 Segurança e acesso",
+        "📜 LGPD",
+    ]
+
+
+abas_renderizadas = st.tabs(abas)
+
+aba_conta = abas_renderizadas[0]
+aba_seguranca = abas_renderizadas[1]
+aba_lgpd = abas_renderizadas[2]
+
+if eh_admin:
+    aba_admin = abas_renderizadas[3]
+    aba_diagnostico = abas_renderizadas[4]
 
 
 with aba_conta:
@@ -121,14 +145,15 @@ with aba_conta:
             value=dados_meu_usuario.get("funcao", "")
         )
 
+        tema_atual = dados_meu_usuario.get("tema", "Escuro")
+
+        if tema_atual not in ["Escuro", "Claro", "Automático"]:
+            tema_atual = "Escuro"
+
         tema = st.selectbox(
             "Tema preferido",
             ["Escuro", "Claro", "Automático"],
-            index=["Escuro", "Claro", "Automático"].index(
-                dados_meu_usuario.get("tema", "Escuro")
-                if dados_meu_usuario.get("tema", "Escuro") in ["Escuro", "Claro", "Automático"]
-                else "Escuro"
-            )
+            index=["Escuro", "Claro", "Automático"].index(tema_atual)
         )
 
     if st.button("💾 Salvar dados da conta", use_container_width=True):
@@ -140,7 +165,10 @@ with aba_conta:
 
         else:
             if novo_avatar is not None:
-                caminho_avatar = salvar_avatar_usuario(login_atual, novo_avatar)
+                caminho_avatar = salvar_avatar_usuario(
+                    login_atual,
+                    novo_avatar
+                )
 
                 if caminho_avatar:
                     dados_meu_usuario["avatar_path"] = caminho_avatar
@@ -153,7 +181,10 @@ with aba_conta:
             dados_meu_usuario["funcao"] = funcao
             dados_meu_usuario["tema"] = tema
 
-            ok = salvar_usuario_runtime(login_atual, dados_meu_usuario)
+            ok = salvar_usuario_runtime(
+                login_atual,
+                dados_meu_usuario
+            )
 
             if ok:
                 st.session_state["nome_usuario"] = novo_nome
@@ -169,11 +200,16 @@ with aba_seguranca:
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric("Perfil", dados_meu_usuario.get("perfil", "Usuário"))
+    col1.metric(
+        "Perfil",
+        dados_meu_usuario.get("perfil", "Usuário")
+    )
+
     col2.metric(
         "E-mail verificado",
         "Sim" if dados_meu_usuario.get("verificado", False) else "Não"
     )
+
     col3.metric(
         "Último acesso",
         dados_meu_usuario.get("ultimo_acesso", "—") or "—"
@@ -181,8 +217,15 @@ with aba_seguranca:
 
     st.markdown("### Trocar senha")
 
-    nova_senha = st.text_input("Nova senha", type="password")
-    confirmar_senha = st.text_input("Confirmar nova senha", type="password")
+    nova_senha = st.text_input(
+        "Nova senha",
+        type="password"
+    )
+
+    confirmar_senha = st.text_input(
+        "Confirmar nova senha",
+        type="password"
+    )
 
     if st.button("🔑 Alterar senha", use_container_width=True):
         if not nova_senha:
@@ -194,7 +237,10 @@ with aba_seguranca:
         else:
             dados_meu_usuario["senha"] = nova_senha
 
-            ok = salvar_usuario_runtime(login_atual, dados_meu_usuario)
+            ok = salvar_usuario_runtime(
+                login_atual,
+                dados_meu_usuario
+            )
 
             if ok:
                 st.success("Senha alterada com sucesso.")
@@ -227,7 +273,9 @@ with aba_lgpd:
     data_aceite = dados_meu_usuario.get("data_aceite_lgpd", "")
 
     if aceitou_lgpd:
-        st.success(f"Termo aceito. Data do aceite: {data_aceite or 'não registrada'}")
+        st.success(
+            f"Termo aceito. Data do aceite: {data_aceite or 'não registrada'}"
+        )
     else:
         st.warning("Você ainda não registrou aceite do termo de uso/LGPD.")
 
@@ -245,7 +293,10 @@ with aba_lgpd:
         if not aceite:
             dados_meu_usuario["data_aceite_lgpd"] = ""
 
-        ok = salvar_usuario_runtime(login_atual, dados_meu_usuario)
+        ok = salvar_usuario_runtime(
+            login_atual,
+            dados_meu_usuario
+        )
 
         if ok:
             st.success("Preferência de LGPD salva.")
@@ -269,311 +320,444 @@ with aba_lgpd:
         if not confirmar_exclusao:
             st.error("Confirme a solicitação antes de continuar.")
         else:
-            ok = registrar_solicitacao_exclusao(login_atual, motivo_exclusao)
+            ok = registrar_solicitacao_exclusao(
+                login_atual,
+                motivo_exclusao
+            )
 
             if ok:
-                st.success("Solicitação registrada. Um administrador deverá avaliar o pedido.")
+                st.success(
+                    "Solicitação registrada. Um administrador deverá avaliar o pedido."
+                )
             else:
                 st.error("Não foi possível registrar a solicitação.")
 
 
-with aba_admin:
-    if not eh_admin:
-        st.info("A administração de usuários é restrita a perfis de administrador.")
-        st.stop()
+if eh_admin:
+    with aba_admin:
+        st.subheader("🛡️ Administração de usuários")
 
-    st.subheader("🛡️ Administração de usuários")
+        usuarios = carregar_usuarios()
 
-    linhas = []
+        linhas = []
 
-    for login, dados in usuarios.items():
-        linhas.append({
-            "Usuário": login,
-            "Nome": dados.get("nome", ""),
-            "E-mail": dados.get("email", ""),
-            "Município": dados.get("municipio", ""),
-            "Instituição": dados.get("instituicao", ""),
-            "Cargo": dados.get("cargo", ""),
-            "Perfil": dados.get("perfil", "Usuário"),
-            "Último acesso": dados.get("ultimo_acesso", ""),
-            "LGPD": "✅ Sim" if dados.get("aceitou_lgpd", False) else "❌ Não",
-            "Verificado": "✅ Sim" if dados.get("verificado", False) else "❌ Não",
-            "Bloqueado": "🔒 Sim" if dados.get("bloqueado", False) else "🔓 Não",
-        })
+        for login, dados in usuarios.items():
+            linhas.append({
+                "Usuário": login,
+                "Nome": dados.get("nome", ""),
+                "E-mail": dados.get("email", ""),
+                "Município": dados.get("municipio", ""),
+                "Instituição": dados.get("instituicao", ""),
+                "Cargo": dados.get("cargo", ""),
+                "Perfil": dados.get("perfil", "Usuário"),
+                "Último acesso": dados.get("ultimo_acesso", ""),
+                "LGPD": "✅ Sim" if dados.get("aceitou_lgpd", False) else "❌ Não",
+                "Verificado": "✅ Sim" if dados.get("verificado", False) else "❌ Não",
+                "Bloqueado": "🔒 Sim" if dados.get("bloqueado", False) else "🔓 Não",
+            })
 
-    df_usuarios = pd.DataFrame(linhas)
+        df_usuarios = pd.DataFrame(linhas)
 
-    k1, k2, k3, k4 = st.columns(4)
+        k1, k2, k3, k4 = st.columns(4)
 
-    k1.metric("Total de usuários", len(df_usuarios))
-    k2.metric("Administradores", len(df_usuarios[df_usuarios["Perfil"] == "Admin"]))
-    k3.metric("Bloqueados", len(df_usuarios[df_usuarios["Bloqueado"] == "🔒 Sim"]))
-    k4.metric("Sem LGPD", len(df_usuarios[df_usuarios["LGPD"] == "❌ Não"]))
-
-    st.dataframe(
-        df_usuarios,
-        use_container_width=True,
-        height=420
-    )
-
-    st.markdown("---")
-    st.subheader("⚙️ Editar usuário")
-
-    lista_usuarios = list(usuarios.keys())
-
-    usuario_selecionado = st.selectbox(
-        "Selecione o usuário",
-        lista_usuarios
-    )
-
-    dados_usuario = dict(usuarios[usuario_selecionado])
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        nome = st.text_input(
-            "Nome do usuário selecionado",
-            value=dados_usuario.get("nome", "")
+        k1.metric("Total de usuários", len(df_usuarios))
+        k2.metric(
+            "Administradores",
+            len(df_usuarios[df_usuarios["Perfil"] == "Admin"])
+        )
+        k3.metric(
+            "Bloqueados",
+            len(df_usuarios[df_usuarios["Bloqueado"] == "🔒 Sim"])
+        )
+        k4.metric(
+            "Sem LGPD",
+            len(df_usuarios[df_usuarios["LGPD"] == "❌ Não"])
         )
 
-        email = st.text_input(
-            "E-mail do usuário selecionado",
-            value=dados_usuario.get("email", "")
+        st.dataframe(
+            df_usuarios,
+            use_container_width=True,
+            height=420
         )
 
-        municipio_admin = st.text_input(
-            "Município do usuário",
-            value=dados_usuario.get("municipio", "")
+        st.markdown("---")
+        st.subheader("⚙️ Editar usuário")
+
+        lista_usuarios = list(usuarios.keys())
+
+        usuario_selecionado = st.selectbox(
+            "Selecione o usuário",
+            lista_usuarios
         )
 
-        instituicao_admin = st.text_input(
-            "Instituição do usuário",
-            value=dados_usuario.get("instituicao", "")
-        )
+        dados_usuario = dict(usuarios[usuario_selecionado])
 
-        cargo_admin = st.text_input(
-            "Cargo do usuário",
-            value=dados_usuario.get("cargo", "")
-        )
+        col1, col2 = st.columns(2)
 
-        funcao_admin = st.text_input(
-            "Função do usuário",
-            value=dados_usuario.get("funcao", "")
-        )
-
-        perfis = ["Admin", "Gestor", "Técnico", "Demo", "Usuário"]
-
-        perfil = dados_usuario.get("perfil", "Usuário")
-
-        if perfil not in perfis:
-            perfil = "Usuário"
-
-        novo_perfil = st.selectbox(
-            "Perfil",
-            perfis,
-            index=perfis.index(perfil)
-        )
-
-    with col2:
-        verificado = st.checkbox(
-            "E-mail verificado",
-            value=bool(dados_usuario.get("verificado", False))
-        )
-
-        bloqueado = st.checkbox(
-            "Usuário bloqueado",
-            value=bool(dados_usuario.get("bloqueado", False))
-        )
-
-        lgpd_admin = st.checkbox(
-            "LGPD aceita",
-            value=bool(dados_usuario.get("aceitou_lgpd", False))
-        )
-
-        tema_admin = st.selectbox(
-            "Tema do usuário",
-            ["Escuro", "Claro", "Automático"],
-            index=["Escuro", "Claro", "Automático"].index(
-                dados_usuario.get("tema", "Escuro")
-                if dados_usuario.get("tema", "Escuro") in ["Escuro", "Claro", "Automático"]
-                else "Escuro"
+        with col1:
+            nome = st.text_input(
+                "Nome do usuário selecionado",
+                value=dados_usuario.get("nome", "")
             )
-        )
 
-        senha_manual = st.text_input(
-            "Nova senha manual",
-            type="password"
-        )
+            email = st.text_input(
+                "E-mail do usuário selecionado",
+                value=dados_usuario.get("email", "")
+            )
 
-    b1, b2, b3 = st.columns(3)
+            municipio_admin = st.text_input(
+                "Município do usuário",
+                value=dados_usuario.get("municipio", "")
+            )
 
-    with b1:
-        if st.button("💾 Salvar usuário", use_container_width=True):
-            dados_usuario["nome"] = nome
-            dados_usuario["email"] = email
-            dados_usuario["municipio"] = municipio_admin
-            dados_usuario["instituicao"] = instituicao_admin
-            dados_usuario["cargo"] = cargo_admin
-            dados_usuario["funcao"] = funcao_admin
-            dados_usuario["perfil"] = novo_perfil
-            dados_usuario["verificado"] = verificado
-            dados_usuario["bloqueado"] = bloqueado
-            dados_usuario["aceitou_lgpd"] = lgpd_admin
-            dados_usuario["tema"] = tema_admin
+            instituicao_admin = st.text_input(
+                "Instituição do usuário",
+                value=dados_usuario.get("instituicao", "")
+            )
 
-            if lgpd_admin and not dados_usuario.get("data_aceite_lgpd"):
-                dados_usuario["data_aceite_lgpd"] = agora_iso()
+            cargo_admin = st.text_input(
+                "Cargo do usuário",
+                value=dados_usuario.get("cargo", "")
+            )
 
-            if senha_manual:
-                dados_usuario["senha"] = senha_manual
+            funcao_admin = st.text_input(
+                "Função do usuário",
+                value=dados_usuario.get("funcao", "")
+            )
 
-            ok = salvar_usuario_runtime(usuario_selecionado, dados_usuario)
+            perfis = [
+                "Admin",
+                "Gestor",
+                "Técnico",
+                "Demo",
+                "Usuário"
+            ]
 
-            if ok:
-                st.success("Usuário atualizado.")
-                st.rerun()
-            else:
-                st.error("Não foi possível salvar.")
+            perfil = dados_usuario.get("perfil", "Usuário")
 
-    with b2:
-        if st.button("🔓 Desbloquear e verificar", use_container_width=True):
-            dados_usuario["bloqueado"] = False
-            dados_usuario["verificado"] = True
+            if perfil not in perfis:
+                perfil = "Usuário"
 
-            ok = salvar_usuario_runtime(usuario_selecionado, dados_usuario)
+            novo_perfil = st.selectbox(
+                "Perfil",
+                perfis,
+                index=perfis.index(perfil)
+            )
 
-            if ok:
-                st.success("Usuário desbloqueado e verificado.")
-                st.rerun()
-            else:
-                st.error("Não foi possível atualizar.")
+        with col2:
+            verificado = st.checkbox(
+                "E-mail verificado",
+                value=bool(dados_usuario.get("verificado", False))
+            )
 
-    with b3:
-        if usuario_selecionado != login_atual:
-            if st.button("🗑️ Excluir usuário", use_container_width=True):
-                ok = excluir_usuario_runtime(usuario_selecionado)
+            bloqueado = st.checkbox(
+                "Usuário bloqueado",
+                value=bool(dados_usuario.get("bloqueado", False))
+            )
 
-                if ok:
-                    st.success("Usuário excluído.")
-                    st.rerun()
-                else:
-                    st.warning("Não foi possível excluir.")
-        else:
-            st.info("Você não pode excluir o próprio usuário.")
+            lgpd_admin = st.checkbox(
+                "LGPD aceita",
+                value=bool(dados_usuario.get("aceitou_lgpd", False))
+            )
 
-    st.markdown("---")
-    st.subheader("➕ Criar usuário manualmente")
+            tema_atual_admin = dados_usuario.get("tema", "Escuro")
 
-    with st.form("form_criar_usuario_admin", clear_on_submit=True):
-        novo_nome_admin = st.text_input("Nome completo")
-        novo_email_admin = st.text_input("E-mail")
-        novo_usuario_admin = st.text_input("Usuário")
-        novo_municipio_admin = st.text_input("Município")
-        novo_instituicao_admin = st.text_input("Instituição")
-        novo_cargo_admin = st.text_input("Cargo")
-        novo_funcao_admin = st.text_input("Função")
+            if tema_atual_admin not in ["Escuro", "Claro", "Automático"]:
+                tema_atual_admin = "Escuro"
 
-        novo_perfil_admin = st.selectbox(
-            "Perfil",
-            ["Admin", "Gestor", "Técnico", "Demo", "Usuário"],
-            index=3
-        )
+            tema_admin = st.selectbox(
+                "Tema do usuário",
+                ["Escuro", "Claro", "Automático"],
+                index=["Escuro", "Claro", "Automático"].index(tema_atual_admin)
+            )
 
-        senha_inicial = st.text_input("Senha inicial", type="password")
+            senha_manual = st.text_input(
+                "Nova senha manual",
+                type="password"
+            )
 
-        criar = st.form_submit_button("Criar usuário", use_container_width=True)
+        b1, b2, b3 = st.columns(3)
 
-        if criar:
-            usuarios_existentes = carregar_usuarios()
-            novo_usuario_admin = str(novo_usuario_admin).strip()
+        with b1:
+            if st.button("💾 Salvar usuário", use_container_width=True):
+                dados_usuario["nome"] = nome
+                dados_usuario["email"] = email
+                dados_usuario["municipio"] = municipio_admin
+                dados_usuario["instituicao"] = instituicao_admin
+                dados_usuario["cargo"] = cargo_admin
+                dados_usuario["funcao"] = funcao_admin
+                dados_usuario["perfil"] = novo_perfil
+                dados_usuario["verificado"] = verificado
+                dados_usuario["bloqueado"] = bloqueado
+                dados_usuario["aceitou_lgpd"] = lgpd_admin
+                dados_usuario["tema"] = tema_admin
 
-            if not novo_nome_admin or not novo_email_admin or not novo_usuario_admin or not senha_inicial:
-                st.error("Preencha nome, e-mail, usuário e senha.")
+                if lgpd_admin and not dados_usuario.get("data_aceite_lgpd"):
+                    dados_usuario["data_aceite_lgpd"] = agora_iso()
 
-            elif "@" not in novo_email_admin:
-                st.error("Informe um e-mail válido.")
+                if senha_manual:
+                    dados_usuario["senha"] = senha_manual
 
-            elif novo_usuario_admin in usuarios_existentes:
-                st.error("Este usuário já existe.")
-
-            else:
                 ok = salvar_usuario_runtime(
-                    novo_usuario_admin,
-                    {
-                        "senha": senha_inicial,
-                        "nome": novo_nome_admin,
-                        "perfil": novo_perfil_admin,
-                        "email": novo_email_admin,
-                        "municipio": novo_municipio_admin,
-                        "instituicao": novo_instituicao_admin,
-                        "cargo": novo_cargo_admin,
-                        "funcao": novo_funcao_admin,
-                        "tema": "Escuro",
-                        "aceitou_lgpd": False,
-                        "data_aceite_lgpd": "",
-                        "avatar_path": "",
-                        "ultimo_acesso": "",
-                        "historico_acessos": [],
-                        "verificado": True,
-                        "bloqueado": False,
-                    }
+                    usuario_selecionado,
+                    dados_usuario
                 )
 
                 if ok:
-                    st.success("Usuário criado com sucesso.")
+                    st.success("Usuário atualizado.")
                     st.rerun()
                 else:
-                    st.error("Não foi possível criar o usuário.")
+                    st.error("Não foi possível salvar.")
 
-    st.markdown("---")
-    st.subheader("📄 Solicitações de exclusão")
+        with b2:
+            if st.button("🔓 Desbloquear e verificar", use_container_width=True):
+                dados_usuario["bloqueado"] = False
+                dados_usuario["verificado"] = True
 
-    solicitacoes = carregar_solicitacoes_exclusao()
+                ok = salvar_usuario_runtime(
+                    usuario_selecionado,
+                    dados_usuario
+                )
 
-    if solicitacoes:
-        df_solicitacoes = pd.DataFrame(solicitacoes)
+                if ok:
+                    st.success("Usuário desbloqueado e verificado.")
+                    st.rerun()
+                else:
+                    st.error("Não foi possível atualizar.")
+
+        with b3:
+            if usuario_selecionado != login_atual:
+                if st.button("🗑️ Excluir usuário", use_container_width=True):
+                    ok = excluir_usuario_runtime(usuario_selecionado)
+
+                    if ok:
+                        st.success("Usuário excluído.")
+                        st.rerun()
+                    else:
+                        st.warning("Não foi possível excluir.")
+            else:
+                st.info("Você não pode excluir o próprio usuário.")
+
+        st.markdown("---")
+        st.subheader("➕ Criar usuário manualmente")
+
+        with st.form("form_criar_usuario_admin", clear_on_submit=True):
+            novo_nome_admin = st.text_input("Nome completo")
+            novo_email_admin = st.text_input("E-mail")
+            novo_usuario_admin = st.text_input("Usuário")
+            novo_municipio_admin = st.text_input("Município")
+            novo_instituicao_admin = st.text_input("Instituição")
+            novo_cargo_admin = st.text_input("Cargo")
+            novo_funcao_admin = st.text_input("Função")
+
+            novo_perfil_admin = st.selectbox(
+                "Perfil",
+                [
+                    "Admin",
+                    "Gestor",
+                    "Técnico",
+                    "Demo",
+                    "Usuário"
+                ],
+                index=3
+            )
+
+            senha_inicial = st.text_input(
+                "Senha inicial",
+                type="password"
+            )
+
+            criar = st.form_submit_button(
+                "Criar usuário",
+                use_container_width=True
+            )
+
+            if criar:
+                usuarios_existentes = carregar_usuarios()
+                novo_usuario_admin = str(novo_usuario_admin).strip()
+
+                if (
+                    not novo_nome_admin
+                    or not novo_email_admin
+                    or not novo_usuario_admin
+                    or not senha_inicial
+                ):
+                    st.error("Preencha nome, e-mail, usuário e senha.")
+
+                elif "@" not in novo_email_admin:
+                    st.error("Informe um e-mail válido.")
+
+                elif novo_usuario_admin in usuarios_existentes:
+                    st.error("Este usuário já existe.")
+
+                else:
+                    ok = salvar_usuario_runtime(
+                        novo_usuario_admin,
+                        {
+                            "senha": senha_inicial,
+                            "nome": novo_nome_admin,
+                            "perfil": novo_perfil_admin,
+                            "email": novo_email_admin,
+                            "municipio": novo_municipio_admin,
+                            "instituicao": novo_instituicao_admin,
+                            "cargo": novo_cargo_admin,
+                            "funcao": novo_funcao_admin,
+                            "tema": "Escuro",
+                            "aceitou_lgpd": False,
+                            "data_aceite_lgpd": "",
+                            "avatar_path": "",
+                            "ultimo_acesso": "",
+                            "historico_acessos": [],
+                            "verificado": True,
+                            "bloqueado": False,
+                        }
+                    )
+
+                    if ok:
+                        st.success("Usuário criado com sucesso.")
+                        st.rerun()
+                    else:
+                        st.error("Não foi possível criar o usuário.")
+
+        st.markdown("---")
+        st.subheader("📄 Solicitações de exclusão")
+
+        solicitacoes = carregar_solicitacoes_exclusao()
+
+        if solicitacoes:
+            df_solicitacoes = pd.DataFrame(solicitacoes)
+
+            st.dataframe(
+                df_solicitacoes,
+                use_container_width=True,
+                height=300
+            )
+
+            indice = st.number_input(
+                "Índice da solicitação para atualizar",
+                min_value=0,
+                max_value=max(len(solicitacoes) - 1, 0),
+                value=0
+            )
+
+            status = st.selectbox(
+                "Novo status",
+                [
+                    "Pendente",
+                    "Em análise",
+                    "Concluída",
+                    "Negada"
+                ]
+            )
+
+            if st.button(
+                "Atualizar status da solicitação",
+                use_container_width=True
+            ):
+                ok = atualizar_status_solicitacao_exclusao(
+                    int(indice),
+                    status
+                )
+
+                if ok:
+                    st.success("Solicitação atualizada.")
+                    st.rerun()
+                else:
+                    st.error("Não foi possível atualizar.")
+        else:
+            st.info("Nenhuma solicitação de exclusão registrada.")
+
+        st.markdown("---")
+        st.subheader("📥 Exportar usuários")
+
+        csv_usuarios = df_usuarios.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            "📄 Baixar lista de usuários",
+            data=csv_usuarios,
+            file_name="usuarios_horizonte.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+
+if eh_admin:
+    with aba_diagnostico:
+        st.subheader("🧪 Diagnóstico da plataforma")
+
+        st.info(
+            "Esta área reúne testes técnicos da infraestrutura da Horizonte. "
+            "Somente administradores têm acesso."
+        )
+
+        st.markdown("### Supabase/PostgreSQL")
+
+        if testar_conexao_supabase is None:
+            st.error(
+                "O módulo de conexão com Supabase não foi localizado. "
+                "Verifique se o arquivo `utils/supabase_client.py` existe."
+            )
+
+        else:
+            if st.button(
+                "Testar conexão com Supabase",
+                use_container_width=True
+            ):
+                try:
+                    dados = testar_conexao_supabase()
+
+                    st.success("Conexão com Supabase realizada com sucesso!")
+
+                    if dados:
+                        st.dataframe(
+                            pd.DataFrame(dados),
+                            use_container_width=True
+                        )
+                    else:
+                        st.warning(
+                            "A conexão funcionou, mas a tabela `usuarios` não retornou registros."
+                        )
+
+                except Exception as e:
+                    st.error("Não foi possível conectar ao Supabase.")
+                    st.exception(e)
+
+        st.markdown("---")
+        st.markdown("### Status dos módulos")
+
+        status_modulos = pd.DataFrame([
+            {
+                "Módulo": "Autenticação local",
+                "Status": "Ativo",
+                "Observação": "Ainda usando JSON/local como base principal."
+            },
+            {
+                "Módulo": "Supabase",
+                "Status": "Em integração",
+                "Observação": "Conexão criada; migração será feita por etapas."
+            },
+            {
+                "Módulo": "Histórico de uploads",
+                "Status": "Ativo",
+                "Observação": "Atualmente salvo em JSON/local."
+            },
+            {
+                "Módulo": "Relatórios PDF",
+                "Status": "Ativo",
+                "Observação": "Resumo executivo e relatório técnico funcionando."
+            },
+            {
+                "Módulo": "Alertas inteligentes",
+                "Status": "Ativo",
+                "Observação": "Integrado ao Painel Universal SINAN."
+            },
+        ])
 
         st.dataframe(
-            df_solicitacoes,
+            status_modulos,
             use_container_width=True,
-            height=300
+            height=260
         )
-
-        indice = st.number_input(
-            "Índice da solicitação para atualizar",
-            min_value=0,
-            max_value=max(len(solicitacoes) - 1, 0),
-            value=0
-        )
-
-        status = st.selectbox(
-            "Novo status",
-            ["Pendente", "Em análise", "Concluída", "Negada"]
-        )
-
-        if st.button("Atualizar status da solicitação", use_container_width=True):
-            ok = atualizar_status_solicitacao_exclusao(int(indice), status)
-
-            if ok:
-                st.success("Solicitação atualizada.")
-                st.rerun()
-            else:
-                st.error("Não foi possível atualizar.")
-    else:
-        st.info("Nenhuma solicitação de exclusão registrada.")
-
-    st.markdown("---")
-    st.subheader("📥 Exportar usuários")
-
-    csv_usuarios = df_usuarios.to_csv(index=False).encode("utf-8")
-
-    st.download_button(
-        "📄 Baixar lista de usuários",
-        data=csv_usuarios,
-        file_name="usuarios_horizonte.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
 
 
 st.caption("Horizonte Health Intelligence • Configurações")
