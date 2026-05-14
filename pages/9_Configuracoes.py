@@ -1,12 +1,3 @@
-try:
-    from utils.historico_uploads import (
-        migrar_historico_uploads_local_para_supabase,
-        historico_para_dataframe,
-    )
-except Exception:
-    migrar_historico_uploads_local_para_supabase = None
-    historico_para_dataframe = None
-    
 import pandas as pd
 import streamlit as st
 
@@ -36,6 +27,15 @@ except Exception:
     testar_conexao_supabase = None
     listar_usuarios_supabase = None
     migrar_usuarios_locais_para_supabase = None
+
+try:
+    from utils.historico_uploads import (
+        migrar_historico_uploads_local_para_supabase,
+        historico_para_dataframe,
+    )
+except Exception:
+    migrar_historico_uploads_local_para_supabase = None
+    historico_para_dataframe = None
 
 
 st.set_page_config(
@@ -832,9 +832,6 @@ if eh_admin:
                     st.exception(e)
 
         st.markdown("---")
-        st.markdown("### Status dos módulos")
-
-                st.markdown("---")
         st.markdown("### Migração do histórico de uploads para Supabase")
 
         st.info(
@@ -901,21 +898,24 @@ if eh_admin:
                 st.error("Não foi possível carregar o histórico de uploads.")
                 st.exception(e)
 
+        st.markdown("---")
+        st.markdown("### Status dos módulos")
+
         status_modulos = pd.DataFrame([
             {
-                "Módulo": "Autenticação local",
-                "Status": "Ativo",
-                "Observação": "Ainda usando JSON/local como base principal."
+                "Módulo": "Autenticação",
+                "Status": "Em migração",
+                "Observação": "Supabase/PostgreSQL em uso preferencial, com fallback local."
             },
             {
                 "Módulo": "Supabase",
-                "Status": "Em integração",
-                "Observação": "Conexão criada; migração será feita por etapas."
+                "Status": "Ativo",
+                "Observação": "Conexão criada e diagnóstico disponível."
             },
             {
                 "Módulo": "Histórico de uploads",
-                "Status": "Ativo",
-                "Observação": "Atualmente salvo em JSON/local."
+                "Status": "Em migração",
+                "Observação": "Novo registro usa Supabase preferencialmente, com fallback local."
             },
             {
                 "Módulo": "Relatórios PDF",
