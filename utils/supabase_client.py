@@ -1,8 +1,13 @@
 import hashlib
-from datetime import datetime
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 
 import streamlit as st
 from supabase import create_client, Client
+
+
+ARQUIVO_USUARIOS_LOCAL = Path("data/usuarios.json")
 
 
 @st.cache_resource
@@ -10,6 +15,10 @@ def obter_supabase() -> Client:
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["service_role_key"]
     return create_client(url, key)
+
+
+def agora_iso():
+    return datetime.now(timezone.utc).isoformat()
 
 
 def gerar_hash_senha(senha):
@@ -22,14 +31,10 @@ def limpar_timestamp(valor):
     if not valor:
         return None
 
-    try:
-        if isinstance(valor, str) and valor.strip() == "":
-            return None
-
-        return valor
-
-    except Exception:
+    if isinstance(valor, str) and valor.strip() == "":
         return None
+
+    return valor
 
 
 def testar_conexao_supabase():
@@ -43,7 +48,7 @@ def testar_conexao_supabase():
         .execute()
     )
 
-    return resposta.data
+    return resposta.data or []
 
 
 def listar_usuarios_supabase():
@@ -54,13 +59,28 @@ def listar_usuarios_supabase():
         .table("usuarios")
         .select(
             "id, usuario, nome, email, perfil, municipio, instituicao, "
-            "cargo, funcao, verificado, bloqueado, aceitou_lgpd, criado_em"
+            "cargo, funcao, tema, verificado, bloqueado, aceitou_lgpd, "
+            "ultimo_acesso, criado_em"
         )
         .order("usuario")
         .execute()
     )
 
     return resposta.data or []
+
+
+def carregar_usuarios_json_local():
+    if not ARQUIVO_USUARIOS_LOCAL.exists():
+        return {}
+
+    try:
+        with open(ARQUIVO_USUARIOS_LOCAL, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        return dados if isinstance(dados, dict) else {}
+
+    except Exception:
+        return {}
 
 
 def usuario_local_para_supabase(usuario, dados):
@@ -85,10 +105,8 @@ def usuario_local_para_supabase(usuario, dados):
 
 
 def migrar_usuarios_locais_para_supabase():
-    from utils.auth import carregar_usuarios
-
     supabase = obter_supabase()
-    usuarios = carregar_usuarios()
+    usuarios = carregar_usuarios_json_local()
 
     resultado = {
         "total_lidos": 0,
@@ -103,13 +121,10 @@ def migrar_usuarios_locais_para_supabase():
         try:
             payload = usuario_local_para_supabase(usuario, dados)
 
-            resposta = (
+            (
                 supabase
                 .table("usuarios")
-                .upsert(
-                    payload,
-                    on_conflict="usuario"
-                )
+                .upsert(payload, on_conflict="usuario")
                 .execute()
             )
 
@@ -152,7 +167,7 @@ def registrar_log_acesso_supabase(usuario, observacao="Login registrado"):
         supabase.table("logs_acesso").insert({
             "usuario": usuario,
             "usuario_id": usuario_id,
-            "data_acesso": datetime.now().isoformat(),
+            "data_acesso": agora_iso(),
             "origem": "Streamlit",
             "observacao": observacao,
         }).execute()
