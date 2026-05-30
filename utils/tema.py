@@ -3,55 +3,106 @@ import plotly.io as pio
 
 
 CORES = {
+    # ========================================================
+    # BASE
+    # ========================================================
     "preto": "#101820",
     "black": "#101820",
     "preto_suave": "#1B1F23",
+    "dark": "#101820",
+    "dark_soft": "#1B1F23",
 
     "branco": "#FFFFFF",
     "white": "#FFFFFF",
     "gelo": "#F7FAF8",
+    "offwhite": "#F7FAF8",
 
     "cinza": "#E5E7EB",
     "cinza_claro": "#F3F4F6",
     "cinza_texto": "#4B5563",
     "gray": "#4B5563",
+    "gray_light": "#E5E7EB",
+    "muted": "#4B5563",
 
+    # ========================================================
+    # VERDES HORIZONTE
+    # ========================================================
     "verde": "#009B5A",
     "verde_claro": "#00C46A",
     "verde_escuro": "#006B3F",
+
+    "green": "#009B5A",
+    "green_light": "#00C46A",
+    "green_dark": "#006B3F",
 
     "emerald": "#009B5A",
     "emerald_light": "#00C46A",
     "emerald_dark": "#006B3F",
 
+    # ========================================================
+    # AZUIS / NAVY
+    # ========================================================
     "azul": "#0A2647",
     "azul_escuro": "#041C32",
-    "blue": "#0A2647",
+    "azul_claro": "#2563EB",
 
+    "blue": "#0A2647",
+    "blue_dark": "#041C32",
+    "blue_light": "#2563EB",
+
+    "navy": "#0A2647",
+    "navy_dark": "#041C32",
+    "navy_light": "#1D4ED8",
+
+    # ========================================================
+    # ALERTAS E APOIO
+    # ========================================================
     "vermelho": "#DC2626",
     "red": "#DC2626",
+    "danger": "#DC2626",
 
     "amarelo": "#F59E0B",
     "yellow": "#F59E0B",
+    "warning": "#F59E0B",
 
     "laranja": "#EA580C",
     "orange": "#EA580C",
 
     "roxo": "#7C3AED",
     "purple": "#7C3AED",
+
+    "rosa": "#DB2777",
+    "pink": "#DB2777",
+
+    "ciano": "#0891B2",
+    "cyan": "#0891B2",
+
+    # ========================================================
+    # NOMES LEGADOS USADOS EM MÓDULOS ANTIGOS
+    # ========================================================
+    "primary": "#009B5A",
+    "secondary": "#101820",
+    "accent": "#00C46A",
+    "background": "#F7FAF8",
+    "card": "#FFFFFF",
+    "text": "#101820",
+    "text_muted": "#4B5563",
+    "border": "#DDE5E0",
 }
 
 
 PALETA = [
     CORES["emerald"],
-    CORES["preto"],
+    CORES["navy"],
     CORES["emerald_light"],
     CORES["emerald_dark"],
-    CORES["azul"],
-    CORES["amarelo"],
-    CORES["vermelho"],
-    CORES["roxo"],
-    CORES["laranja"],
+    CORES["blue_light"],
+    CORES["warning"],
+    CORES["danger"],
+    CORES["purple"],
+    CORES["orange"],
+    CORES["cyan"],
+    CORES["pink"],
     CORES["cinza_texto"],
 ]
 
@@ -252,7 +303,13 @@ def aplicar_tema_plotly():
                 "font": {
                     "color": "#101820"
                 }
-            }
+            },
+            "margin": {
+                "l": 40,
+                "r": 30,
+                "t": 50,
+                "b": 40,
+            },
         }
     }
 
@@ -279,7 +336,13 @@ def aplicar_tema_plotly():
                 "font": {
                     "color": "#101820"
                 }
-            }
+            },
+            "margin": {
+                "l": 40,
+                "r": 30,
+                "t": 50,
+                "b": 40,
+            },
         }
     }
 
