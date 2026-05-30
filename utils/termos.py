@@ -51,11 +51,6 @@ d) Responsabilização penal, quando a conduta configurar crime tipificado na le
 
 Ao prosseguir com o acesso e utilizar a plataforma da Horizonte Soluções Tecnológicas, o USUÁRIO declara ter lido, compreendido e aceitado integralmente todas as disposições deste Termo de Responsabilidade e Sigilo, submetendo-se às suas condições sob as penas da lei.
 
-Declaro que li e concordo com o Termo de Responsabilidade, Sigilo e Uso Aceitável de Dados Sensíveis.
-
-IMPORTANTE: Data e hora devem ser registradas eletronicamente no sistema no momento do aceite.
-"""
-
 
 def agora_aceite_iso():
     return datetime.now(timezone.utc).isoformat()
