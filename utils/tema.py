@@ -1,303 +1,183 @@
+import streamlit as st
 import plotly.io as pio
 
 
 CORES = {
-    "navy": "#0A2647",
-    "emerald": "#00ED64",
-    "titanium": "#E1E8ED",
-    "midnight": "#101820",
-    "white": "#F8FAFC",
-    "white_pure": "#FFFFFF",
-    "text_dark": "#101820",
-    "text_light": "#F8FAFC",
-    "muted": "#64748B",
-    "border": "#D6DEE6",
-    "danger": "#DC2626",
-    "warning": "#F59E0B",
-    "success": "#00ED64",
-
-    # Compatibilidade com códigos antigos
-    "azul": "#0A2647",
-    "verde": "#00ED64",
-    "amarelo": "#F59E0B",
-    "laranja": "#F97316",
-    "fundo": "#101820",
-    "branco": "#F8FAFC",
     "preto": "#101820",
+    "preto_suave": "#1B1F23",
+    "branco": "#FFFFFF",
+    "gelo": "#F7FAF8",
+    "cinza": "#E5E7EB",
+    "cinza_texto": "#4B5563",
+    "verde": "#009B5A",
+    "verde_claro": "#00C46A",
+    "verde_escuro": "#006B3F",
+    "azul": "#0A2647",
+    "vermelho": "#DC2626",
+    "amarelo": "#F59E0B",
 }
 
 
-PALETA = [
-    CORES["navy"],
-    CORES["emerald"],
-    "#1D4ED8",
-    "#14B8A6",
-    "#F59E0B",
-    "#DC2626",
-]
+def aplicar_tema_streamlit(st_module=None):
+    if st_module is None:
+        st_module = st
 
-
-def aplicar_tema_streamlit(st):
-    st.markdown(
+    st_module.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap');
+        :root {
+            --hz-black: #101820;
+            --hz-white: #FFFFFF;
+            --hz-bg: #F7FAF8;
+            --hz-card: #FFFFFF;
+            --hz-border: #DDE5E0;
+            --hz-muted: #4B5563;
+            --hz-green: #009B5A;
+            --hz-green-light: #00C46A;
+            --hz-green-dark: #006B3F;
+        }
 
         html, body, [data-testid="stAppViewContainer"] {
-            background: linear-gradient(135deg, #071827 0%, #0A2647 62%, #064E3B 100%) !important;
-            color: #F8FAFC !important;
+            background: var(--hz-bg) !important;
+            color: var(--hz-black) !important;
         }
 
-        body, p, li, label, input, textarea, button {
-            font-family: 'Inter', sans-serif !important;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Montserrat', sans-serif !important;
-            color: #FFFFFF !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.02em;
-        }
-
-        /* NÃO aplicar fonte global em ícones internos */
-        span[class*="material"],
-        i[class*="material"],
-        [class*="Material"],
-        [data-testid="stIconMaterial"] {
-            font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
-        }
-
-        /* Oculta qualquer fallback textual de ícone que vaze */
-        span[title*="keyboard_double"],
-        button[title*="keyboard_double"],
-        [aria-label*="keyboard_double"],
-        [title="Keyboard_double_arrow_right"],
-        [title="Keyboard_double_arrow_left"] {
-            display: none !important;
-            visibility: hidden !important;
-            width: 0 !important;
-            height: 0 !important;
+        .block-container {
+            padding-top: 2.5rem !important;
+            padding-bottom: 4rem !important;
+            max-width: 1320px !important;
         }
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #08131F 0%, #0A2647 100%) !important;
-            border-right: 1px solid rgba(255,255,255,0.08);
+            background: #101820 !important;
+            border-right: 1px solid rgba(255,255,255,0.08) !important;
         }
 
         [data-testid="stSidebar"] * {
-            color: #F8FAFC !important;
+            color: #FFFFFF !important;
         }
 
-        [data-testid="stSidebarNav"] a {
+        [data-testid="stSidebar"] button {
+            background: #009B5A !important;
+            color: #FFFFFF !important;
             border-radius: 12px !important;
-            margin-bottom: 4px !important;
-        }
-
-        [data-testid="stSidebarNav"] a:hover {
-            background: rgba(255,255,255,0.10) !important;
-        }
-
-        .hz-hero,
-        .mb-header {
-            background: linear-gradient(135deg, rgba(7,24,39,0.98), rgba(10,38,71,0.98), rgba(6,78,59,0.94));
-            border: 1px solid rgba(255,255,255,0.10);
-            padding: 42px;
-            border-radius: 24px;
-            margin-bottom: 32px;
-            box-shadow: 0px 24px 60px rgba(0,0,0,0.35);
-        }
-
-        .hz-kicker {
-            color: #00ED64 !important;
-            font-weight: 800;
-            font-size: 0.78rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-
-        .hz-hero h1,
-        .mb-header h1 {
-            color: #FFFFFF !important;
-            font-size: clamp(2.1rem, 4vw, 4.4rem);
-            line-height: 1.08;
-            margin-top: 10px;
-            margin-bottom: 18px;
-        }
-
-        .hz-hero p,
-        .mb-header p {
-            color: #E1E8ED !important;
-            font-size: 1.08rem;
-            line-height: 1.7;
-            max-width: 1000px;
-        }
-
-        .hz-card,
-        .mb-card {
-            background: rgba(8,19,31,0.76);
-            border: 1px solid rgba(255,255,255,0.10);
-            border-left: 6px solid #00ED64;
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0px 18px 40px rgba(0,0,0,0.24);
-            backdrop-filter: blur(12px);
-            margin-bottom: 18px;
-            height: 100%;
-        }
-
-        .hz-card h3,
-        .hz-card h4,
-        .mb-card h3,
-        .mb-card h4 {
-            color: #FFFFFF !important;
-        }
-
-        .hz-card p,
-        .mb-card p {
-            color: #E1E8ED !important;
-            line-height: 1.65;
-        }
-
-        div[data-testid="stMetric"] {
-            background: rgba(8,19,31,0.76) !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
-            border-left: 6px solid #00ED64 !important;
-            border-radius: 20px !important;
-            padding: 18px !important;
-            min-height: 128px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            box-shadow: 0px 18px 40px rgba(0,0,0,0.24) !important;
-            overflow: hidden !important;
-        }
-
-        div[data-testid="stMetricLabel"] {
-            color: #E1E8ED !important;
-            font-weight: 700 !important;
-            font-size: clamp(0.72rem, 1vw, 0.95rem) !important;
-            overflow-wrap: anywhere !important;
-        }
-
-        div[data-testid="stMetricValue"] {
-            color: #FFFFFF !important;
-            font-family: 'Montserrat', sans-serif !important;
+            border: 1px solid #009B5A !important;
             font-weight: 800 !important;
-            font-size: clamp(1.35rem, 2vw, 2.5rem) !important;
-            overflow-wrap: anywhere !important;
         }
 
-        input,
-        textarea,
-        [data-baseweb="input"] > div,
-        [data-baseweb="select"] > div {
-            background: rgba(255,255,255,0.98) !important;
-            color: #101820 !important;
-            border: 1px solid rgba(255,255,255,0.20) !important;
-            border-radius: 14px !important;
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--hz-black) !important;
+            font-weight: 900 !important;
+            letter-spacing: -0.03em;
         }
 
-        input,
-        textarea {
-            color: #101820 !important;
+        p, span, label, div {
+            font-family: "Inter", "Segoe UI", sans-serif;
         }
 
-        label {
-            color: #FFFFFF !important;
-            font-weight: 600 !important;
+        .stMarkdown, .stText, p {
+            color: var(--hz-black) !important;
         }
 
-        [data-testid="stFileUploader"] {
-            background: rgba(255,255,255,0.08) !important;
-            border: 2px dashed rgba(255,255,255,0.18) !important;
+        [data-testid="stMetric"] {
+            background: var(--hz-card) !important;
+            border: 1px solid var(--hz-border) !important;
+            border-left: 6px solid var(--hz-green) !important;
             border-radius: 18px !important;
-            padding: 18px !important;
+            padding: 1rem !important;
+            box-shadow: 0 14px 35px rgba(16,24,32,0.07) !important;
         }
 
-        [data-testid="stFileUploader"] * {
-            color: #F8FAFC !important;
+        [data-testid="stMetric"] label {
+            color: var(--hz-muted) !important;
+            font-weight: 700 !important;
         }
 
-        [data-testid="stFileUploaderDropzone"] {
-            background: transparent !important;
-        }
-
-        [data-testid="stFileUploaderDropzone"] button {
-            background: #00ED64 !important;
-            color: #101820 !important;
-        }
-
-        button,
-        .stButton button,
-        .stDownloadButton button {
-            background: #00ED64 !important;
-            color: #101820 !important;
-            border: 1px solid #00ED64 !important;
-            border-radius: 14px !important;
-            font-weight: 800 !important;
-            min-height: 48px;
-            transition: all 0.18s ease-in-out;
-        }
-
-        button:hover,
-        .stButton button:hover,
-        .stDownloadButton button:hover {
-            filter: brightness(1.05);
-            transform: translateY(-1px);
-            box-shadow: 0px 12px 30px rgba(0,237,100,0.26);
+        [data-testid="stMetricValue"] {
+            color: var(--hz-black) !important;
+            font-weight: 900 !important;
         }
 
         [data-testid="stDataFrame"] {
-            background: #FFFFFF !important;
-            border-radius: 18px !important;
-            overflow: hidden !important;
-            border: 1px solid rgba(255,255,255,0.12) !important;
-        }
-
-        [data-testid="stDataFrame"] * {
-            color: #101820 !important;
-        }
-
-        [data-testid="stExpander"] {
-            background: rgba(8,19,31,0.58) !important;
             border-radius: 16px !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
+            overflow: hidden !important;
+            border: 1px solid var(--hz-border) !important;
+            background: #FFFFFF !important;
         }
 
-        [data-testid="stExpander"] * {
-            color: #F8FAFC !important;
+        .stButton > button,
+        .stDownloadButton > button,
+        button[kind="primary"],
+        button[kind="secondary"] {
+            background: linear-gradient(135deg, #009B5A, #00C46A) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #009B5A !important;
+            border-radius: 14px !important;
+            font-weight: 900 !important;
+            min-height: 45px !important;
+            box-shadow: 0 12px 28px rgba(0,155,90,0.22) !important;
+        }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+        input, textarea, select {
+            background: #FFFFFF !important;
+            color: #101820 !important;
+            border: 1px solid #CBD5D1 !important;
+            border-radius: 12px !important;
+        }
+
+        input:focus, textarea:focus {
+            border-color: #009B5A !important;
+            box-shadow: 0 0 0 2px rgba(0,155,90,0.14) !important;
         }
 
         [data-testid="stAlert"] {
             border-radius: 16px !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
+            border: 1px solid rgba(0,155,90,0.16) !important;
         }
 
-        [data-testid="stAlert"] * {
-            color: inherit !important;
+        div[data-baseweb="tab-list"] {
+            gap: .5rem;
         }
 
-        @media (max-width: 900px) {
-            .hz-hero,
-            .mb-header {
-                padding: 28px;
-                border-radius: 18px;
-            }
+        button[data-baseweb="tab"] {
+            background: #FFFFFF !important;
+            color: #101820 !important;
+            border: 1px solid #DDE5E0 !important;
+            border-radius: 14px !important;
+            padding: .6rem 1rem !important;
+            font-weight: 800 !important;
+        }
 
-            div[data-testid="stMetric"] {
-                min-height: 108px !important;
-                padding: 14px !important;
-            }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            background: #101820 !important;
+            color: #FFFFFF !important;
+            border-color: #101820 !important;
+        }
 
-            div[data-testid="stMetricValue"] {
-                font-size: 1.55rem !important;
-            }
+        hr {
+            border-color: #DDE5E0 !important;
+        }
 
-            div[data-testid="stMetricLabel"] {
-                font-size: 0.78rem !important;
-            }
+        .hz-card {
+            background: #FFFFFF;
+            border: 1px solid #DDE5E0;
+            border-radius: 22px;
+            padding: 1.3rem;
+            box-shadow: 0 14px 35px rgba(16,24,32,0.07);
+        }
+
+        .hz-kicker {
+            color: #009B5A !important;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .82rem;
         }
         </style>
         """,
@@ -306,39 +186,40 @@ def aplicar_tema_streamlit(st):
 
 
 def aplicar_tema_plotly():
-    template = pio.templates["plotly_dark"]
+    template = {
+        "layout": {
+            "paper_bgcolor": "#FFFFFF",
+            "plot_bgcolor": "#FFFFFF",
+            "font": {
+                "color": "#101820",
+                "family": "Inter, Segoe UI, sans-serif"
+            },
+            "colorway": [
+                "#009B5A",
+                "#101820",
+                "#00C46A",
+                "#006B3F",
+                "#4B5563",
+                "#F59E0B",
+                "#DC2626",
+            ],
+            "xaxis": {
+                "gridcolor": "#E5E7EB",
+                "linecolor": "#CBD5D1",
+                "zerolinecolor": "#E5E7EB",
+            },
+            "yaxis": {
+                "gridcolor": "#E5E7EB",
+                "linecolor": "#CBD5D1",
+                "zerolinecolor": "#E5E7EB",
+            },
+            "legend": {
+                "font": {
+                    "color": "#101820"
+                }
+            }
+        }
+    }
 
-    template.layout.paper_bgcolor = "rgba(0,0,0,0)"
-    template.layout.plot_bgcolor = "rgba(0,0,0,0)"
-    template.layout.font = dict(
-        color="#F8FAFC",
-        size=14,
-        family="Inter"
-    )
-    template.layout.colorway = PALETA
-    template.layout.title = dict(
-        font=dict(
-            color="#FFFFFF",
-            size=22,
-            family="Montserrat"
-        )
-    )
-    template.layout.xaxis = dict(
-        tickfont=dict(color="#E1E8ED"),
-        title=dict(font=dict(color="#E1E8ED")),
-        gridcolor="rgba(255,255,255,0.08)",
-        zerolinecolor="rgba(255,255,255,0.12)",
-    )
-    template.layout.yaxis = dict(
-        tickfont=dict(color="#E1E8ED"),
-        title=dict(font=dict(color="#E1E8ED")),
-        gridcolor="rgba(255,255,255,0.08)",
-        zerolinecolor="rgba(255,255,255,0.12)",
-    )
-    template.layout.legend = dict(
-        font=dict(color="#F8FAFC"),
-        bgcolor="rgba(8,19,31,0.72)"
-    )
-
-    pio.templates["horizonte_dark"] = template
-    pio.templates.default = "horizonte_dark"
+    pio.templates["horizonte"] = template
+    pio.templates.default = "horizonte"
