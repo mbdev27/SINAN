@@ -13,9 +13,26 @@ CORES = {
     "verde_claro": "#00C46A",
     "verde_escuro": "#006B3F",
     "azul": "#0A2647",
+    "azul_escuro": "#041C32",
     "vermelho": "#DC2626",
     "amarelo": "#F59E0B",
+    "laranja": "#EA580C",
+    "roxo": "#7C3AED",
 }
+
+
+PALETA = [
+    CORES["verde"],
+    CORES["preto"],
+    CORES["verde_claro"],
+    CORES["verde_escuro"],
+    CORES["azul"],
+    CORES["amarelo"],
+    CORES["vermelho"],
+    CORES["roxo"],
+    CORES["laranja"],
+    CORES["cinza_texto"],
+]
 
 
 def aplicar_tema_streamlit(st_module=None):
@@ -35,6 +52,7 @@ def aplicar_tema_streamlit(st_module=None):
             --hz-green: #009B5A;
             --hz-green-light: #00C46A;
             --hz-green-dark: #006B3F;
+            --hz-blue: #0A2647;
         }
 
         html, body, [data-testid="stAppViewContainer"] {
@@ -43,7 +61,7 @@ def aplicar_tema_streamlit(st_module=None):
         }
 
         .block-container {
-            padding-top: 2.5rem !important;
+            padding-top: 2.2rem !important;
             padding-bottom: 4rem !important;
             max-width: 1320px !important;
         }
@@ -194,15 +212,7 @@ def aplicar_tema_plotly():
                 "color": "#101820",
                 "family": "Inter, Segoe UI, sans-serif"
             },
-            "colorway": [
-                "#009B5A",
-                "#101820",
-                "#00C46A",
-                "#006B3F",
-                "#4B5563",
-                "#F59E0B",
-                "#DC2626",
-            ],
+            "colorway": PALETA,
             "xaxis": {
                 "gridcolor": "#E5E7EB",
                 "linecolor": "#CBD5D1",
