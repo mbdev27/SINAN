@@ -11,6 +11,13 @@ from pathlib import Path
 
 import streamlit as st
 
+from utils.termos import (
+    TERMO_RESPONSABILIDADE_SIGILO,
+    VERSAO_TERMO_RESPONSABILIDADE,
+    agora_aceite_iso,
+    texto_resumido_aceite,
+)
+
 try:
     from utils.supabase_client import obter_supabase
 except Exception:
@@ -33,8 +40,9 @@ USUARIOS_PADRAO = {
         "cargo": "Administrador",
         "funcao": "Gestão da plataforma",
         "tema": "Escuro",
-        "aceitou_lgpd": True,
+        "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
+        "versao_termo_lgpd": "",
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -53,6 +61,7 @@ USUARIOS_PADRAO = {
         "tema": "Escuro",
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
+        "versao_termo_lgpd": "",
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -142,6 +151,7 @@ def normalizar_usuario(dados):
         "tema": "Escuro",
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
+        "versao_termo_lgpd": "",
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -172,6 +182,7 @@ def converter_usuario_supabase(item):
         "tema": item.get("tema") or "Escuro",
         "aceitou_lgpd": bool(item.get("aceitou_lgpd", False)),
         "data_aceite_lgpd": item.get("data_aceite_lgpd") or "",
+        "versao_termo_lgpd": item.get("versao_termo_lgpd") or "",
         "avatar_path": item.get("avatar_url") or "",
         "ultimo_acesso": item.get("ultimo_acesso") or "",
         "historico_acessos": [],
@@ -181,7 +192,7 @@ def converter_usuario_supabase(item):
 
 
 # ============================================================
-# USUÁRIOS — JSON FALLBACK
+# JSON FALLBACK
 # ============================================================
 
 def carregar_usuarios_arquivo():
@@ -203,7 +214,7 @@ def carregar_usuarios_json_com_padrao():
 
 
 # ============================================================
-# USUÁRIOS — SUPABASE
+# SUPABASE
 # ============================================================
 
 def supabase_disponivel():
@@ -287,17 +298,34 @@ def salvar_usuario_runtime(usuario, dados):
     try:
         if supabase_disponivel():
             supabase = obter_supabase()
-
             payload = payload_usuario_supabase(usuario, dados)
 
-            (
-                supabase
-                .table("usuarios")
-                .upsert(payload, on_conflict="usuario")
-                .execute()
-            )
+            try:
+                payload["versao_termo_lgpd"] = dados.get("versao_termo_lgpd") or None
+            except Exception:
+                pass
 
-            return True
+            try:
+                (
+                    supabase
+                    .table("usuarios")
+                    .upsert(payload, on_conflict="usuario")
+                    .execute()
+                )
+
+                return True
+
+            except Exception:
+                payload.pop("versao_termo_lgpd", None)
+
+                (
+                    supabase
+                    .table("usuarios")
+                    .upsert(payload, on_conflict="usuario")
+                    .execute()
+                )
+
+                return True
 
     except Exception:
         pass
@@ -569,6 +597,31 @@ def registrar_log_acesso(usuario, dados):
     return False
 
 
+def finalizar_login(usuario, dados):
+    momento = agora_iso()
+
+    dados["ultimo_acesso"] = momento
+
+    historico = dados.get("historico_acessos", [])
+
+    if not isinstance(historico, list):
+        historico = []
+
+    historico.append(momento)
+    dados["historico_acessos"] = historico[-20:]
+
+    salvar_usuario_runtime(usuario, dados)
+    registrar_log_acesso(usuario, dados)
+
+    st.session_state["autenticado"] = True
+    st.session_state["usuario"] = usuario
+    st.session_state["nome_usuario"] = dados.get("nome", usuario)
+    st.session_state["perfil_usuario"] = dados.get("perfil", "Usuário")
+    st.session_state["tema_usuario"] = dados.get("tema", "Escuro")
+
+    return True
+
+
 def fazer_login(usuario, senha):
     usuarios = carregar_usuarios()
     usuario = str(usuario).strip()
@@ -599,28 +652,12 @@ def fazer_login(usuario, senha):
     if not senha_valida:
         return False
 
-    momento = agora_iso()
+    if not dados.get("aceitou_lgpd", False):
+        st.session_state["termo_pendente_usuario"] = usuario
+        st.session_state["termo_pendente_validado"] = True
+        return False
 
-    dados["ultimo_acesso"] = momento
-
-    historico = dados.get("historico_acessos", [])
-
-    if not isinstance(historico, list):
-        historico = []
-
-    historico.append(momento)
-    dados["historico_acessos"] = historico[-20:]
-
-    salvar_usuario_runtime(usuario, dados)
-    registrar_log_acesso(usuario, dados)
-
-    st.session_state["autenticado"] = True
-    st.session_state["usuario"] = usuario
-    st.session_state["nome_usuario"] = dados.get("nome", usuario)
-    st.session_state["perfil_usuario"] = dados.get("perfil", "Usuário")
-    st.session_state["tema_usuario"] = dados.get("tema", "Escuro")
-
-    return True
+    return finalizar_login(usuario, dados)
 
 
 def fazer_logout():
@@ -630,6 +667,9 @@ def fazer_logout():
         "nome_usuario",
         "perfil_usuario",
         "tema_usuario",
+        "termo_pendente_usuario",
+        "termo_pendente_validado",
+        "termo_cadastro_aceito",
         "df_sinan_atual",
         "df_sinan_publico",
         "agravo_sinan_atual",
@@ -698,7 +738,7 @@ def css_login():
         }}
 
         .block-container {{
-            max-width: 430px !important;
+            max-width: 470px !important;
             padding-top: 5vh !important;
             padding-left: 18px !important;
             padding-right: 18px !important;
@@ -791,11 +831,14 @@ def css_login():
             margin-top: 18px;
         }}
 
-        input {{
+        input, textarea {{
             background: rgba(8, 19, 31, 0.72) !important;
             color: #F8FAFC !important;
             border: 1px solid rgba(225, 232, 237, 0.25) !important;
             border-radius: 14px !important;
+        }}
+
+        input {{
             min-height: 46px !important;
         }}
 
@@ -861,6 +904,117 @@ def exibir_logo():
         """,
         unsafe_allow_html=True
     )
+
+
+# ============================================================
+# TERMO
+# ============================================================
+
+def exibir_termo_em_area():
+    st.text_area(
+        "Termo completo",
+        value=TERMO_RESPONSABILIDADE_SIGILO,
+        height=420,
+        disabled=True,
+        label_visibility="collapsed"
+    )
+
+
+def abrir_modal_termo_cadastro():
+    if hasattr(st, "dialog"):
+        @st.dialog("Termo de Responsabilidade, Sigilo e Uso Aceitável")
+        def modal_termo():
+            st.caption("Role até o final, leia o conteúdo e confirme o aceite.")
+            exibir_termo_em_area()
+
+            confirmar = st.checkbox(
+                texto_resumido_aceite(),
+                key="modal_confirmar_termo_cadastro"
+            )
+
+            if st.button("Aceitar termo", use_container_width=True):
+                if confirmar:
+                    st.session_state["termo_cadastro_aceito"] = True
+                    st.rerun()
+                else:
+                    st.error("É necessário marcar a declaração de aceite.")
+
+        modal_termo()
+
+    else:
+        st.warning("Seu Streamlit não possui modal nativo. O termo será exibido abaixo.")
+        exibir_termo_em_area()
+
+
+def tela_aceite_obrigatorio():
+    css_login()
+    exibir_logo()
+
+    usuario = st.session_state.get("termo_pendente_usuario")
+
+    if not usuario:
+        st.session_state["auth_tela"] = "login"
+        st.rerun()
+
+    usuarios = carregar_usuarios()
+    dados = usuarios.get(usuario)
+
+    if not dados:
+        st.error("Usuário não localizado.")
+        st.session_state.pop("termo_pendente_usuario", None)
+        st.session_state.pop("termo_pendente_validado", None)
+        st.stop()
+
+    st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="hz-mini-title">Aceite obrigatório do termo</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="hz-mini-subtitle">
+            Para acessar a plataforma, é obrigatório ler e aceitar o Termo de
+            Responsabilidade, Sigilo e Uso Aceitável de Dados Sensíveis.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    exibir_termo_em_area()
+
+    aceite = st.checkbox(
+        texto_resumido_aceite(),
+        key="aceite_termo_login"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Aceitar e acessar", use_container_width=True):
+            if not aceite:
+                st.error("A aceitação do termo é obrigatória para acessar a plataforma.")
+            else:
+                dados["aceitou_lgpd"] = True
+                dados["data_aceite_lgpd"] = agora_aceite_iso()
+                dados["versao_termo_lgpd"] = VERSAO_TERMO_RESPONSABILIDADE
+
+                salvar_usuario_runtime(usuario, dados)
+
+                st.session_state.pop("termo_pendente_usuario", None)
+                st.session_state.pop("termo_pendente_validado", None)
+
+                finalizar_login(usuario, dados)
+                st.rerun()
+
+    with col2:
+        if st.button("Não aceito", use_container_width=True):
+            st.warning(
+                "O acesso à plataforma não será permitido sem o aceite do termo."
+            )
+            st.session_state.pop("termo_pendente_usuario", None)
+            st.session_state.pop("termo_pendente_validado", None)
+            st.session_state["auth_tela"] = "login"
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 
 # ============================================================
@@ -930,6 +1084,9 @@ def exibir_codigo_teste(chave):
 def tela_login():
     css_login()
 
+    if st.session_state.get("termo_pendente_usuario"):
+        tela_aceite_obrigatorio()
+
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
 
@@ -958,6 +1115,10 @@ def tela_login():
             if entrar:
                 if fazer_login(usuario, senha):
                     st.rerun()
+
+                elif st.session_state.get("termo_pendente_usuario"):
+                    st.rerun()
+
                 else:
                     st.error("Usuário ou senha inválidos.")
 
@@ -984,9 +1145,14 @@ def tela_login():
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar conta</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="hz-mini-subtitle">Preencha seus dados. Enviaremos um código de 4 dígitos para validar seu e-mail.</div>',
+            '<div class="hz-mini-subtitle">Preencha seus dados. Para criar a conta, é obrigatório aceitar o Termo de Responsabilidade, Sigilo e Uso Aceitável de Dados Sensíveis.</div>',
             unsafe_allow_html=True
         )
+
+        if st.button("📜 Ler termo completo", use_container_width=True):
+            abrir_modal_termo_cadastro()
+
+        termo_aceito_previo = bool(st.session_state.get("termo_cadastro_aceito", False))
 
         with st.form("form_cadastro", clear_on_submit=False):
             nome = st.text_input("Nome completo")
@@ -994,7 +1160,12 @@ def tela_login():
             usuario = st.text_input("Usuário")
             senha = st.text_input("Senha", type="password")
             confirmar = st.text_input("Confirmar senha", type="password")
-            aceite = st.checkbox("Li e aceito os termos de uso e política de privacidade")
+
+            aceite = st.checkbox(
+                texto_resumido_aceite(),
+                value=termo_aceito_previo,
+                key="checkbox_termo_cadastro"
+            )
 
             cadastrar = st.form_submit_button("Cadastrar", use_container_width=True)
 
@@ -1004,14 +1175,22 @@ def tela_login():
 
                 if not nome or not email or not usuario or not senha:
                     st.error("Preencha todos os campos.")
+
                 elif "@" not in email:
                     st.error("Informe um e-mail válido.")
+
                 elif usuario in usuarios:
                     st.error("Este usuário já existe.")
+
                 elif senha != confirmar:
                     st.error("As senhas não conferem.")
+
                 elif not aceite:
-                    st.error("É necessário aceitar os termos para continuar.")
+                    st.error(
+                        "A aceitação do Termo de Responsabilidade, Sigilo e Uso Aceitável "
+                        "de Dados Sensíveis é obrigatória para criar conta."
+                    )
+
                 else:
                     iniciar_verificacao_cadastro(nome, email, usuario, senha)
                     st.rerun()
@@ -1051,7 +1230,8 @@ def tela_login():
                         "funcao": "",
                         "tema": "Escuro",
                         "aceitou_lgpd": True,
-                        "data_aceite_lgpd": agora_iso(),
+                        "data_aceite_lgpd": agora_aceite_iso(),
+                        "versao_termo_lgpd": VERSAO_TERMO_RESPONSABILIDADE,
                         "avatar_path": "",
                         "ultimo_acesso": "",
                         "historico_acessos": [],
@@ -1061,6 +1241,7 @@ def tela_login():
                 )
 
                 st.session_state.pop("cadastro_pendente", None)
+                st.session_state.pop("termo_cadastro_aceito", None)
                 st.session_state["auth_tela"] = "cadastro_sucesso"
                 st.rerun()
             else:
