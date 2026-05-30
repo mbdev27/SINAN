@@ -134,6 +134,29 @@ def imagem_base64(caminho):
         return None
 
 
+def logo_html():
+    for caminho in [
+        "assets/horizonte_logo.png",
+        "horizonte_logo.png",
+        "assets/logo.png",
+    ]:
+        if Path(caminho).exists():
+            logo_b64 = imagem_base64(caminho)
+
+            if logo_b64:
+                return f"""
+                <div class="hz-logo-box">
+                    <img src="data:image/png;base64,{logo_b64}" class="hz-logo-img">
+                </div>
+                """
+
+    return """
+    <div class="hz-logo-box">
+        <div class="hz-logo-fallback">H</div>
+    </div>
+    """
+
+
 def normalizar_usuario(dados):
     base = {
         "id": "",
@@ -230,7 +253,7 @@ def carregar_usuarios_supabase():
     usuarios = {}
 
     for item in resposta.data or []:
-        login = item.get("usuario")
+        login = str(item.get("usuario", "")).strip()
 
         if login:
             usuarios[login] = converter_usuario_supabase(item)
@@ -254,13 +277,17 @@ def carregar_usuarios():
 def encontrar_login_por_usuario_ou_email(identificador, usuarios):
     identificador = str(identificador).strip().lower()
 
-    if identificador in usuarios:
-        return identificador
+    if not identificador:
+        return None
 
     for login, dados in usuarios.items():
-        email = str(dados.get("email", "")).strip().lower()
+        login_normalizado = str(login).strip().lower()
+        email_normalizado = str(dados.get("email", "")).strip().lower()
 
-        if email and email == identificador:
+        if identificador == login_normalizado:
+            return login
+
+        if email_normalizado and identificador == email_normalizado:
             return login
 
     return None
@@ -725,7 +752,7 @@ def css_login():
 
         .block-container {
             max-width: 430px !important;
-            padding-top: 5vh !important;
+            padding-top: 6vh !important;
             padding-left: 14px !important;
             padding-right: 14px !important;
             margin: 0 auto !important;
@@ -746,20 +773,36 @@ def css_login():
             z-index: 2;
         }
 
-        [data-testid="stImage"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            margin-bottom: 16px !important;
+        .hz-logo-box {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            text-align: center;
         }
 
-        [data-testid="stImage"] img {
-            max-width: 170px !important;
-            width: 100% !important;
-            height: auto !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            display: block !important;
+        .hz-logo-img {
+            display: block;
+            width: 170px;
+            max-width: 170px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .hz-logo-fallback {
+            width: 84px;
+            height: 84px;
+            margin: auto;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #101820, #009B5A);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: 900;
+            border: 1px solid rgba(0,0,0,.08);
         }
 
         .hz-login-title {
@@ -894,29 +937,7 @@ def css_login():
 
 
 def exibir_logo():
-    for caminho in [
-        "assets/horizonte_logo.png",
-        "horizonte_logo.png",
-        "assets/logo.png",
-    ]:
-        if Path(caminho).exists():
-            st.image(caminho, width=170)
-            return
-
-    st.markdown(
-        """
-        <div style="text-align:center;">
-            <div style="
-                width:84px;height:84px;margin:auto;border-radius:22px;
-                background:linear-gradient(135deg,#101820,#009B5A);
-                display:flex;align-items:center;justify-content:center;
-                color:white;font-size:48px;font-weight:900;
-                border:1px solid rgba(0,0,0,.08);
-            ">H</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown(logo_html(), unsafe_allow_html=True)
 
 
 def exibir_termo_em_area():
@@ -1358,7 +1379,7 @@ def tela_login():
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Redefinir senha</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="hz-mini-subtitle">Informe seu usuário. Enviaremos um código de 4 dígitos para o e-mail cadastrado.</div>',
+            '<div class="hz-mini-subtitle">Informe seu usuário ou e-mail. Enviaremos um código de 4 dígitos para o e-mail cadastrado.</div>',
             unsafe_allow_html=True
         )
 
