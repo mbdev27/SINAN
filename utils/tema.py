@@ -6,11 +6,15 @@ CORES = {
     "preto": "#101820",
     "black": "#101820",
     "preto_suave": "#1B1F23",
+
     "branco": "#FFFFFF",
     "white": "#FFFFFF",
     "gelo": "#F7FAF8",
+
     "cinza": "#E5E7EB",
+    "cinza_claro": "#F3F4F6",
     "cinza_texto": "#4B5563",
+    "gray": "#4B5563",
 
     "verde": "#009B5A",
     "verde_claro": "#00C46A",
@@ -26,10 +30,13 @@ CORES = {
 
     "vermelho": "#DC2626",
     "red": "#DC2626",
+
     "amarelo": "#F59E0B",
     "yellow": "#F59E0B",
+
     "laranja": "#EA580C",
     "orange": "#EA580C",
+
     "roxo": "#7C3AED",
     "purple": "#7C3AED",
 }
@@ -47,6 +54,10 @@ PALETA = [
     CORES["laranja"],
     CORES["cinza_texto"],
 ]
+
+
+def cor(nome, padrao="#009B5A"):
+    return CORES.get(nome, padrao)
 
 
 def aplicar_tema_streamlit(st_module=None):
