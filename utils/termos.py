@@ -51,6 +51,8 @@ d) Responsabilização penal, quando a conduta configurar crime tipificado na le
 
 Ao prosseguir com o acesso e utilizar a plataforma da Horizonte Soluções Tecnológicas, o USUÁRIO declara ter lido, compreendido e aceitado integralmente todas as disposições deste Termo de Responsabilidade e Sigilo, submetendo-se às suas condições sob as penas da lei.
 
+"""
+
 
 def agora_aceite_iso():
     return datetime.now(timezone.utc).isoformat()
