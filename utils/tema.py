@@ -4,28 +4,42 @@ import plotly.io as pio
 
 CORES = {
     "preto": "#101820",
+    "black": "#101820",
     "preto_suave": "#1B1F23",
     "branco": "#FFFFFF",
+    "white": "#FFFFFF",
     "gelo": "#F7FAF8",
     "cinza": "#E5E7EB",
     "cinza_texto": "#4B5563",
+
     "verde": "#009B5A",
     "verde_claro": "#00C46A",
     "verde_escuro": "#006B3F",
+
+    "emerald": "#009B5A",
+    "emerald_light": "#00C46A",
+    "emerald_dark": "#006B3F",
+
     "azul": "#0A2647",
     "azul_escuro": "#041C32",
+    "blue": "#0A2647",
+
     "vermelho": "#DC2626",
+    "red": "#DC2626",
     "amarelo": "#F59E0B",
+    "yellow": "#F59E0B",
     "laranja": "#EA580C",
+    "orange": "#EA580C",
     "roxo": "#7C3AED",
+    "purple": "#7C3AED",
 }
 
 
 PALETA = [
-    CORES["verde"],
+    CORES["emerald"],
     CORES["preto"],
-    CORES["verde_claro"],
-    CORES["verde_escuro"],
+    CORES["emerald_light"],
+    CORES["emerald_dark"],
     CORES["azul"],
     CORES["amarelo"],
     CORES["vermelho"],
