@@ -251,6 +251,21 @@ def carregar_usuarios():
         return carregar_usuarios_json_com_padrao()
 
 
+def encontrar_login_por_usuario_ou_email(identificador, usuarios):
+    identificador = str(identificador).strip().lower()
+
+    if identificador in usuarios:
+        return identificador
+
+    for login, dados in usuarios.items():
+        email = str(dados.get("email", "")).strip().lower()
+
+        if email and email == identificador:
+            return login
+
+    return None
+
+
 def payload_usuario_supabase(usuario, dados):
     payload = {
         "usuario": usuario,
@@ -617,12 +632,12 @@ def termo_esta_valido(dados):
 
 def fazer_login(usuario, senha):
     usuarios = carregar_usuarios()
-    usuario = str(usuario).strip()
+    login_encontrado = encontrar_login_por_usuario_ou_email(usuario, usuarios)
 
-    if usuario not in usuarios:
+    if not login_encontrado:
         return False
 
-    dados = usuarios[usuario]
+    dados = usuarios[login_encontrado]
 
     if dados.get("bloqueado", False):
         st.error("Este usuário está bloqueado. Procure o administrador.")
@@ -646,16 +661,16 @@ def fazer_login(usuario, senha):
         return False
 
     if not termo_esta_valido(dados):
-        st.session_state["termo_pendente_usuario"] = usuario
+        st.session_state["termo_pendente_usuario"] = login_encontrado
         st.session_state["termo_pendente_validado"] = True
         return False
 
     if dados.get("requer_troca_senha", False):
-        st.session_state["troca_senha_obrigatoria_usuario"] = usuario
+        st.session_state["troca_senha_obrigatoria_usuario"] = login_encontrado
         st.session_state["troca_senha_obrigatoria_validado"] = True
         return False
 
-    return finalizar_login(usuario, dados)
+    return finalizar_login(login_encontrado, dados)
 
 
 def fazer_logout():
@@ -710,7 +725,7 @@ def css_login():
 
         .block-container {
             max-width: 430px !important;
-            padding-top: 4vh !important;
+            padding-top: 5vh !important;
             padding-left: 14px !important;
             padding-right: 14px !important;
             margin: 0 auto !important;
@@ -722,28 +737,8 @@ def css_login():
             border-radius: 28px;
             padding: 36px 28px 32px 28px;
             box-shadow: 0 24px 70px rgba(16, 24, 32, 0.14);
-            min-height: auto;
             position: relative;
             overflow: hidden;
-        }
-
-        .hz-login-shell:after {
-            content: "";
-            position: absolute;
-            left: -10%;
-            right: -10%;
-            bottom: -46px;
-            height: 120px;
-            background:
-                repeating-radial-gradient(
-                    ellipse at center,
-                    rgba(0,155,90,0.16) 0,
-                    rgba(0,155,90,0.16) 1px,
-                    transparent 2px,
-                    transparent 14px
-                );
-            opacity: .28;
-            pointer-events: none;
         }
 
         .hz-login-content {
@@ -754,6 +749,7 @@ def css_login():
         [data-testid="stImage"] {
             display: flex !important;
             justify-content: center !important;
+            align-items: center !important;
             margin-bottom: 16px !important;
         }
 
@@ -761,6 +757,9 @@ def css_login():
             max-width: 170px !important;
             width: 100% !important;
             height: auto !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            display: block !important;
         }
 
         .hz-login-title {
@@ -1364,12 +1363,18 @@ def tela_login():
         )
 
         with st.form("form_redefinir_email", clear_on_submit=False):
-            usuario = st.text_input("Usuário")
+            usuario = st.text_input("Usuário ou e-mail")
             enviar = st.form_submit_button("Enviar código", use_container_width=True)
 
             if enviar:
-                iniciar_redefinicao(str(usuario).strip())
-                st.rerun()
+                usuarios = carregar_usuarios()
+                login = encontrar_login_por_usuario_ou_email(usuario, usuarios)
+
+                if login:
+                    iniciar_redefinicao(login)
+                    st.rerun()
+                else:
+                    st.error("Usuário ou e-mail não encontrado.")
 
         if st.button("Voltar para login", use_container_width=True):
             st.session_state["auth_tela"] = "login"
