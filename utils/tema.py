@@ -229,7 +229,7 @@ def aplicar_tema_streamlit(st_module=None):
 
 
 def aplicar_tema_plotly():
-    template = {
+    template_light = {
         "layout": {
             "paper_bgcolor": "#FFFFFF",
             "plot_bgcolor": "#FFFFFF",
@@ -256,5 +256,35 @@ def aplicar_tema_plotly():
         }
     }
 
-    pio.templates["horizonte"] = template
+    template_dark_compat = {
+        "layout": {
+            "paper_bgcolor": "#FFFFFF",
+            "plot_bgcolor": "#FFFFFF",
+            "font": {
+                "color": "#101820",
+                "family": "Inter, Segoe UI, sans-serif"
+            },
+            "colorway": PALETA,
+            "xaxis": {
+                "gridcolor": "#E5E7EB",
+                "linecolor": "#CBD5D1",
+                "zerolinecolor": "#E5E7EB",
+            },
+            "yaxis": {
+                "gridcolor": "#E5E7EB",
+                "linecolor": "#CBD5D1",
+                "zerolinecolor": "#E5E7EB",
+            },
+            "legend": {
+                "font": {
+                    "color": "#101820"
+                }
+            }
+        }
+    }
+
+    pio.templates["horizonte"] = template_light
+    pio.templates["horizonte_light"] = template_light
+    pio.templates["horizonte_dark"] = template_dark_compat
+
     pio.templates.default = "horizonte"
