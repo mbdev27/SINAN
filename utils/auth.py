@@ -43,6 +43,7 @@ USUARIOS_PADRAO = {
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
+        "requer_troca_senha": False,
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -62,6 +63,7 @@ USUARIOS_PADRAO = {
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
+        "requer_troca_senha": False,
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -70,10 +72,6 @@ USUARIOS_PADRAO = {
     },
 }
 
-
-# ============================================================
-# UTILITÁRIOS
-# ============================================================
 
 def agora_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -152,6 +150,7 @@ def normalizar_usuario(dados):
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
+        "requer_troca_senha": False,
         "avatar_path": "",
         "ultimo_acesso": "",
         "historico_acessos": [],
@@ -183,6 +182,7 @@ def converter_usuario_supabase(item):
         "aceitou_lgpd": bool(item.get("aceitou_lgpd", False)),
         "data_aceite_lgpd": item.get("data_aceite_lgpd") or "",
         "versao_termo_lgpd": item.get("versao_termo_lgpd") or "",
+        "requer_troca_senha": bool(item.get("requer_troca_senha", False)),
         "avatar_path": item.get("avatar_url") or "",
         "ultimo_acesso": item.get("ultimo_acesso") or "",
         "historico_acessos": [],
@@ -190,10 +190,6 @@ def converter_usuario_supabase(item):
         "bloqueado": bool(item.get("bloqueado", False)),
     })
 
-
-# ============================================================
-# JSON FALLBACK
-# ============================================================
 
 def carregar_usuarios_arquivo():
     return carregar_json(ARQUIVO_USUARIOS, {})
@@ -212,10 +208,6 @@ def carregar_usuarios_json_com_padrao():
         for usuario, dados in usuarios.items()
     }
 
-
-# ============================================================
-# SUPABASE
-# ============================================================
 
 def supabase_disponivel():
     return obter_supabase is not None
@@ -276,6 +268,8 @@ def payload_usuario_supabase(usuario, dados):
         "aceitou_lgpd": bool(dados.get("aceitou_lgpd", False)),
         "data_aceite_lgpd": dados.get("data_aceite_lgpd") or None,
         "ultimo_acesso": dados.get("ultimo_acesso") or None,
+        "versao_termo_lgpd": dados.get("versao_termo_lgpd") or None,
+        "requer_troca_senha": bool(dados.get("requer_troca_senha", False)),
     }
 
     if dados.get("senha"):
@@ -301,11 +295,6 @@ def salvar_usuario_runtime(usuario, dados):
             payload = payload_usuario_supabase(usuario, dados)
 
             try:
-                payload["versao_termo_lgpd"] = dados.get("versao_termo_lgpd") or None
-            except Exception:
-                pass
-
-            try:
                 (
                     supabase
                     .table("usuarios")
@@ -317,6 +306,7 @@ def salvar_usuario_runtime(usuario, dados):
 
             except Exception:
                 payload.pop("versao_termo_lgpd", None)
+                payload.pop("requer_troca_senha", None)
 
                 (
                     supabase
@@ -365,9 +355,21 @@ def excluir_usuario_runtime(usuario):
     return False
 
 
-# ============================================================
-# SOLICITAÇÕES DE EXCLUSÃO
-# ============================================================
+def forcar_novo_aceite_termo_para_todos():
+    usuarios = carregar_usuarios()
+    total = 0
+
+    for login, dados in usuarios.items():
+        dados = dict(dados)
+        dados["aceitou_lgpd"] = False
+        dados["data_aceite_lgpd"] = ""
+        dados["versao_termo_lgpd"] = ""
+
+        if salvar_usuario_runtime(login, dados):
+            total += 1
+
+    return total
+
 
 def carregar_solicitacoes_exclusao():
     try:
@@ -469,10 +471,6 @@ def atualizar_status_solicitacao_exclusao(indice, status):
     return salvar_json(ARQUIVO_EXCLUSAO, solicitacoes)
 
 
-# ============================================================
-# AVATAR
-# ============================================================
-
 def salvar_avatar_usuario(usuario, arquivo):
     if arquivo is None:
         return ""
@@ -495,10 +493,6 @@ def salvar_avatar_usuario(usuario, arquivo):
     except Exception:
         return ""
 
-
-# ============================================================
-# EMAIL
-# ============================================================
 
 def enviar_email_codigo(destinatario, codigo, assunto):
     try:
@@ -539,10 +533,6 @@ Caso você não tenha solicitado este acesso, ignore esta mensagem.
     except Exception:
         return False
 
-
-# ============================================================
-# LOGIN / LOGOUT
-# ============================================================
 
 def usuario_logado():
     return st.session_state.get("autenticado", False)
@@ -622,6 +612,13 @@ def finalizar_login(usuario, dados):
     return True
 
 
+def termo_esta_valido(dados):
+    return (
+        bool(dados.get("aceitou_lgpd", False))
+        and dados.get("versao_termo_lgpd", "") == VERSAO_TERMO_RESPONSABILIDADE
+    )
+
+
 def fazer_login(usuario, senha):
     usuarios = carregar_usuarios()
     usuario = str(usuario).strip()
@@ -652,9 +649,14 @@ def fazer_login(usuario, senha):
     if not senha_valida:
         return False
 
-    if not dados.get("aceitou_lgpd", False):
+    if not termo_esta_valido(dados):
         st.session_state["termo_pendente_usuario"] = usuario
         st.session_state["termo_pendente_validado"] = True
+        return False
+
+    if dados.get("requer_troca_senha", False):
+        st.session_state["troca_senha_obrigatoria_usuario"] = usuario
+        st.session_state["troca_senha_obrigatoria_validado"] = True
         return False
 
     return finalizar_login(usuario, dados)
@@ -669,6 +671,8 @@ def fazer_logout():
         "tema_usuario",
         "termo_pendente_usuario",
         "termo_pendente_validado",
+        "troca_senha_obrigatoria_usuario",
+        "troca_senha_obrigatoria_validado",
         "termo_cadastro_aceito",
         "df_sinan_atual",
         "df_sinan_publico",
@@ -687,10 +691,6 @@ def fazer_logout():
         if chave in st.session_state:
             del st.session_state[chave]
 
-
-# ============================================================
-# CSS LOGIN
-# ============================================================
 
 def css_login():
     fundo = None
@@ -906,10 +906,6 @@ def exibir_logo():
     )
 
 
-# ============================================================
-# TERMO
-# ============================================================
-
 def exibir_termo_em_area():
     st.text_area(
         "Termo completo",
@@ -987,7 +983,7 @@ def tela_aceite_obrigatorio():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Aceitar e acessar", use_container_width=True):
+        if st.button("Aceitar e continuar", use_container_width=True):
             if not aceite:
                 st.error("A aceitação do termo é obrigatória para acessar a plataforma.")
             else:
@@ -1000,14 +996,17 @@ def tela_aceite_obrigatorio():
                 st.session_state.pop("termo_pendente_usuario", None)
                 st.session_state.pop("termo_pendente_validado", None)
 
-                finalizar_login(usuario, dados)
+                if dados.get("requer_troca_senha", False):
+                    st.session_state["troca_senha_obrigatoria_usuario"] = usuario
+                    st.session_state["troca_senha_obrigatoria_validado"] = True
+                else:
+                    finalizar_login(usuario, dados)
+
                 st.rerun()
 
     with col2:
         if st.button("Não aceito", use_container_width=True):
-            st.warning(
-                "O acesso à plataforma não será permitido sem o aceite do termo."
-            )
+            st.warning("O acesso à plataforma não será permitido sem o aceite do termo.")
             st.session_state.pop("termo_pendente_usuario", None)
             st.session_state.pop("termo_pendente_validado", None)
             st.session_state["auth_tela"] = "login"
@@ -1017,9 +1016,64 @@ def tela_aceite_obrigatorio():
     st.stop()
 
 
-# ============================================================
-# FLUXOS DE VERIFICAÇÃO
-# ============================================================
+def tela_troca_senha_obrigatoria():
+    css_login()
+    exibir_logo()
+
+    usuario = st.session_state.get("troca_senha_obrigatoria_usuario")
+
+    if not usuario:
+        st.session_state["auth_tela"] = "login"
+        st.rerun()
+
+    usuarios = carregar_usuarios()
+    dados = usuarios.get(usuario)
+
+    if not dados:
+        st.error("Usuário não localizado.")
+        st.session_state.pop("troca_senha_obrigatoria_usuario", None)
+        st.session_state.pop("troca_senha_obrigatoria_validado", None)
+        st.stop()
+
+    st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="hz-mini-title">Atualização de senha obrigatória</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="hz-mini-subtitle">
+            O administrador solicitou a atualização da sua senha.
+            Crie uma nova senha para continuar acessando a plataforma.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    with st.form("form_troca_senha_obrigatoria", clear_on_submit=False):
+        nova = st.text_input("Nova senha", type="password")
+        confirmar = st.text_input("Confirmar nova senha", type="password")
+
+        salvar = st.form_submit_button("Atualizar senha e acessar", use_container_width=True)
+
+        if salvar:
+            if not nova:
+                st.error("Informe a nova senha.")
+            elif nova != confirmar:
+                st.error("As senhas não conferem.")
+            else:
+                dados["senha"] = nova
+                dados["senha_hash"] = ""
+                dados["requer_troca_senha"] = False
+
+                salvar_usuario_runtime(usuario, dados)
+
+                st.session_state.pop("troca_senha_obrigatoria_usuario", None)
+                st.session_state.pop("troca_senha_obrigatoria_validado", None)
+
+                finalizar_login(usuario, dados)
+                st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
 
 def iniciar_verificacao_cadastro(nome, email, usuario, senha):
     codigo = gerar_codigo()
@@ -1077,15 +1131,14 @@ def exibir_codigo_teste(chave):
             st.info(f"Modo teste: código de verificação **{codigo}**")
 
 
-# ============================================================
-# TELA LOGIN
-# ============================================================
-
 def tela_login():
     css_login()
 
     if st.session_state.get("termo_pendente_usuario"):
         tela_aceite_obrigatorio()
+
+    if st.session_state.get("troca_senha_obrigatoria_usuario"):
+        tela_troca_senha_obrigatoria()
 
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
@@ -1117,6 +1170,9 @@ def tela_login():
                     st.rerun()
 
                 elif st.session_state.get("termo_pendente_usuario"):
+                    st.rerun()
+
+                elif st.session_state.get("troca_senha_obrigatoria_usuario"):
                     st.rerun()
 
                 else:
@@ -1186,10 +1242,7 @@ def tela_login():
                     st.error("As senhas não conferem.")
 
                 elif not aceite:
-                    st.error(
-                        "A aceitação do Termo de Responsabilidade, Sigilo e Uso Aceitável "
-                        "de Dados Sensíveis é obrigatória para criar conta."
-                    )
+                    st.error("A aceitação do termo é obrigatória para criar conta.")
 
                 else:
                     iniciar_verificacao_cadastro(nome, email, usuario, senha)
@@ -1232,6 +1285,7 @@ def tela_login():
                         "aceitou_lgpd": True,
                         "data_aceite_lgpd": agora_aceite_iso(),
                         "versao_termo_lgpd": VERSAO_TERMO_RESPONSABILIDADE,
+                        "requer_troca_senha": False,
                         "avatar_path": "",
                         "ultimo_acesso": "",
                         "historico_acessos": [],
@@ -1343,7 +1397,9 @@ def tela_login():
                     usuario = pendente["usuario"]
                     dados = dict(usuarios[usuario])
                     dados["senha"] = nova
+                    dados["senha_hash"] = ""
                     dados["verificado"] = True
+                    dados["requer_troca_senha"] = False
 
                     salvar_usuario_runtime(usuario, dados)
 
