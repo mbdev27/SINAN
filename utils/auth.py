@@ -703,7 +703,7 @@ def css_login():
 
         [data-testid="stAppViewContainer"] {
             background:
-                radial-gradient(circle at top left, rgba(0,155,90,0.10), transparent 24%),
+                radial-gradient(circle at top left, rgba(0,155,90,0.08), transparent 26%),
                 linear-gradient(135deg, #F7FAF8 0%, #FFFFFF 48%, #EAF6EF 100%) !important;
             min-height: 100vh;
         }
@@ -711,8 +711,8 @@ def css_login():
         .block-container {
             max-width: 430px !important;
             padding-top: 4vh !important;
-            padding-left: 18px !important;
-            padding-right: 18px !important;
+            padding-left: 14px !important;
+            padding-right: 14px !important;
             margin: 0 auto !important;
         }
 
@@ -720,12 +720,9 @@ def css_login():
             background: #FFFFFF;
             border: 1px solid #DDE5E0;
             border-radius: 28px;
-            padding: 34px 28px 28px 28px;
+            padding: 36px 28px 32px 28px;
             box-shadow: 0 24px 70px rgba(16, 24, 32, 0.14);
-            min-height: 86vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            min-height: auto;
             position: relative;
             overflow: hidden;
         }
@@ -735,8 +732,8 @@ def css_login():
             position: absolute;
             left: -10%;
             right: -10%;
-            bottom: -35px;
-            height: 130px;
+            bottom: -46px;
+            height: 120px;
             background:
                 repeating-radial-gradient(
                     ellipse at center,
@@ -745,7 +742,7 @@ def css_login():
                     transparent 2px,
                     transparent 14px
                 );
-            opacity: .35;
+            opacity: .28;
             pointer-events: none;
         }
 
@@ -757,11 +754,11 @@ def css_login():
         [data-testid="stImage"] {
             display: flex !important;
             justify-content: center !important;
-            margin-bottom: 8px !important;
+            margin-bottom: 16px !important;
         }
 
         [data-testid="stImage"] img {
-            max-width: 190px !important;
+            max-width: 170px !important;
             width: 100% !important;
             height: auto !important;
         }
@@ -769,11 +766,11 @@ def css_login():
         .hz-login-title {
             text-align: center;
             color: #101820 !important;
-            font-size: 1.25rem;
+            font-size: 1.05rem;
             line-height: 1.15;
             font-weight: 900;
             letter-spacing: -0.03em;
-            margin-top: 8px;
+            margin-top: 4px;
             margin-bottom: 4px;
         }
 
@@ -781,7 +778,7 @@ def css_login():
             text-align: center;
             color: #4B5563 !important;
             line-height: 1.45;
-            font-size: 0.88rem;
+            font-size: 0.78rem;
             margin-bottom: 22px;
         }
 
@@ -816,7 +813,7 @@ def css_login():
             gap: 12px;
             margin: 18px 0;
             color: #64748B !important;
-            font-size: 0.86rem;
+            font-size: 0.78rem;
         }
 
         .hz-divider:before,
@@ -830,8 +827,8 @@ def css_login():
         .hz-note {
             text-align: center;
             color: #64748B !important;
-            font-size: 0.82rem;
-            margin-top: 18px;
+            font-size: 0.72rem;
+            margin-top: 16px;
         }
 
         input, textarea {
@@ -842,7 +839,7 @@ def css_login():
         }
 
         input {
-            min-height: 44px !important;
+            min-height: 42px !important;
         }
 
         input::placeholder {
@@ -852,12 +849,13 @@ def css_login():
         label {
             color: #101820 !important;
             font-weight: 700 !important;
+            font-size: .78rem !important;
         }
 
         button {
             border-radius: 12px !important;
             font-weight: 900 !important;
-            min-height: 46px !important;
+            min-height: 44px !important;
         }
 
         .stButton > button,
@@ -865,7 +863,7 @@ def css_login():
             background: linear-gradient(135deg, #009B5A, #00B86B) !important;
             color: #FFFFFF !important;
             border: 1px solid #009B5A !important;
-            box-shadow: 0px 14px 28px rgba(0,155,90,0.24);
+            box-shadow: 0px 14px 28px rgba(0,155,90,0.20);
         }
 
         .stButton > button:hover,
@@ -883,14 +881,12 @@ def css_login():
             border-radius: 14px !important;
         }
 
-        .hz-link-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: .82rem;
-            color: #4B5563;
-            margin-top: -4px;
-            margin-bottom: 10px;
+        [data-testid="stVerticalBlock"] {
+            gap: 0.7rem !important;
+        }
+
+        .element-container {
+            margin-bottom: 0.25rem !important;
         }
         </style>
         """,
@@ -905,7 +901,7 @@ def exibir_logo():
         "assets/logo.png",
     ]:
         if Path(caminho).exists():
-            st.image(caminho, width=185)
+            st.image(caminho, width=170)
             return
 
     st.markdown(
@@ -1191,7 +1187,6 @@ def tela_login():
         with st.form("form_login", clear_on_submit=False):
             usuario = st.text_input("Usuário ou e-mail", placeholder="Usuário ou e-mail")
             senha = st.text_input("Senha", type="password", placeholder="Senha")
-
             entrar = st.form_submit_button("Entrar", use_container_width=True)
 
             if entrar:
