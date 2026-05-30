@@ -39,7 +39,7 @@ USUARIOS_PADRAO = {
         "instituicao": "Horizonte",
         "cargo": "Administrador",
         "funcao": "Gestão da plataforma",
-        "tema": "Escuro",
+        "tema": "Claro",
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
@@ -59,7 +59,7 @@ USUARIOS_PADRAO = {
         "instituicao": "",
         "cargo": "",
         "funcao": "",
-        "tema": "Escuro",
+        "tema": "Claro",
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
@@ -146,7 +146,7 @@ def normalizar_usuario(dados):
         "instituicao": "",
         "cargo": "",
         "funcao": "",
-        "tema": "Escuro",
+        "tema": "Claro",
         "aceitou_lgpd": False,
         "data_aceite_lgpd": "",
         "versao_termo_lgpd": "",
@@ -178,7 +178,7 @@ def converter_usuario_supabase(item):
         "instituicao": item.get("instituicao") or "",
         "cargo": item.get("cargo") or "",
         "funcao": item.get("funcao") or "",
-        "tema": item.get("tema") or "Escuro",
+        "tema": item.get("tema") or "Claro",
         "aceitou_lgpd": bool(item.get("aceitou_lgpd", False)),
         "data_aceite_lgpd": item.get("data_aceite_lgpd") or "",
         "versao_termo_lgpd": item.get("versao_termo_lgpd") or "",
@@ -261,7 +261,7 @@ def payload_usuario_supabase(usuario, dados):
         "instituicao": dados.get("instituicao") or None,
         "cargo": dados.get("cargo") or None,
         "funcao": dados.get("funcao") or None,
-        "tema": dados.get("tema", "Escuro"),
+        "tema": dados.get("tema", "Claro"),
         "avatar_url": dados.get("avatar_path") or None,
         "verificado": bool(dados.get("verificado", False)),
         "bloqueado": bool(dados.get("bloqueado", False)),
@@ -390,10 +390,6 @@ def carregar_solicitacoes_exclusao():
         pass
 
     return carregar_json(ARQUIVO_EXCLUSAO, [])
-
-
-def salvar_solicitacoes_exclusao(solicitacoes):
-    return salvar_json(ARQUIVO_EXCLUSAO, solicitacoes)
 
 
 def registrar_solicitacao_exclusao(usuario, motivo=""):
@@ -607,7 +603,7 @@ def finalizar_login(usuario, dados):
     st.session_state["usuario"] = usuario
     st.session_state["nome_usuario"] = dados.get("nome", usuario)
     st.session_state["perfil_usuario"] = dados.get("perfil", "Usuário")
-    st.session_state["tema_usuario"] = dados.get("tema", "Escuro")
+    st.session_state["tema_usuario"] = dados.get("tema", "Claro")
 
     return True
 
@@ -693,187 +689,209 @@ def fazer_logout():
 
 
 def css_login():
-    fundo = None
-
-    for caminho in [
-        "assets/digital_presence.png",
-        "digital_presence.png",
-    ]:
-        if Path(caminho).exists():
-            fundo = imagem_base64(caminho)
-            break
-
-    if fundo:
-        background_css = f"""
-        background:
-            linear-gradient(
-                90deg,
-                rgba(5, 15, 25, 0.72) 0%,
-                rgba(5, 15, 25, 0.54) 45%,
-                rgba(5, 15, 25, 0.38) 100%
-            ),
-            url("data:image/png;base64,{fundo}");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        """
-    else:
-        background_css = """
-        background:
-            radial-gradient(circle at 20% 20%, rgba(0,237,100,0.16), transparent 34%),
-            radial-gradient(circle at 80% 70%, rgba(0,237,100,0.10), transparent 30%),
-            linear-gradient(135deg, #050F19 0%, #0A2647 58%, #064E3B 100%);
-        """
-
     st.markdown(
-        f"""
+        """
         <style>
         [data-testid="stSidebar"],
         [data-testid="collapsedControl"],
-        header[data-testid="stHeader"] {{
+        header[data-testid="stHeader"] {
             display: none !important;
             visibility: hidden !important;
             width: 0 !important;
             height: 0 !important;
-        }}
+        }
 
-        .block-container {{
-            max-width: 470px !important;
-            padding-top: 5vh !important;
+        [data-testid="stAppViewContainer"] {
+            background:
+                radial-gradient(circle at top left, rgba(0,155,90,0.10), transparent 24%),
+                linear-gradient(135deg, #F7FAF8 0%, #FFFFFF 48%, #EAF6EF 100%) !important;
+            min-height: 100vh;
+        }
+
+        .block-container {
+            max-width: 430px !important;
+            padding-top: 4vh !important;
             padding-left: 18px !important;
             padding-right: 18px !important;
             margin: 0 auto !important;
-        }}
+        }
 
-        [data-testid="stAppViewContainer"] {{
-            {background_css}
-            min-height: 100vh;
-        }}
+        .hz-login-shell {
+            background: #FFFFFF;
+            border: 1px solid #DDE5E0;
+            border-radius: 28px;
+            padding: 34px 28px 28px 28px;
+            box-shadow: 0 24px 70px rgba(16, 24, 32, 0.14);
+            min-height: 86vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-        [data-testid="stImage"] {{
+        .hz-login-shell:after {
+            content: "";
+            position: absolute;
+            left: -10%;
+            right: -10%;
+            bottom: -35px;
+            height: 130px;
+            background:
+                repeating-radial-gradient(
+                    ellipse at center,
+                    rgba(0,155,90,0.16) 0,
+                    rgba(0,155,90,0.16) 1px,
+                    transparent 2px,
+                    transparent 14px
+                );
+            opacity: .35;
+            pointer-events: none;
+        }
+
+        .hz-login-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        [data-testid="stImage"] {
             display: flex !important;
             justify-content: center !important;
-            margin-bottom: 10px !important;
-        }}
+            margin-bottom: 8px !important;
+        }
 
-        [data-testid="stImage"] img {{
-            max-width: 250px !important;
+        [data-testid="stImage"] img {
+            max-width: 190px !important;
             width: 100% !important;
             height: auto !important;
-        }}
+        }
 
-        .hz-login-title {{
+        .hz-login-title {
             text-align: center;
-            color: #FFFFFF !important;
+            color: #101820 !important;
             font-size: 1.25rem;
             line-height: 1.15;
             font-weight: 900;
             letter-spacing: -0.03em;
-            margin-top: 4px;
-            margin-bottom: 8px;
-        }}
-
-        .hz-login-subtitle {{
-            text-align: center;
-            color: #E1E8ED !important;
-            line-height: 1.55;
-            font-size: 0.94rem;
-            margin-bottom: 20px;
-        }}
-
-        .hz-panel {{
-            background: rgba(5, 15, 25, 0.56);
-            border: 1px solid rgba(225, 232, 237, 0.18);
-            border-radius: 22px;
-            padding: 22px;
-            box-shadow: 0 28px 70px rgba(0,0,0,0.34);
-            backdrop-filter: blur(14px);
             margin-top: 8px;
-        }}
+            margin-bottom: 4px;
+        }
 
-        .hz-mini-title {{
-            color: #FFFFFF !important;
+        .hz-login-subtitle {
+            text-align: center;
+            color: #4B5563 !important;
+            line-height: 1.45;
+            font-size: 0.88rem;
+            margin-bottom: 22px;
+        }
+
+        .hz-panel {
+            background: #FFFFFF;
+            border: 1px solid #DDE5E0;
+            border-radius: 26px;
+            padding: 24px;
+            box-shadow: 0 20px 55px rgba(16,24,32,0.12);
+            margin-top: 8px;
+        }
+
+        .hz-mini-title {
+            color: #101820 !important;
             font-weight: 900;
             font-size: 1.25rem;
             text-align: center;
             margin-bottom: 6px;
-        }}
+        }
 
-        .hz-mini-subtitle {{
-            color: #C9D5DF !important;
+        .hz-mini-subtitle {
+            color: #4B5563 !important;
             text-align: center;
             font-size: 0.88rem;
             line-height: 1.5;
             margin-bottom: 18px;
-        }}
+        }
 
-        .hz-divider {{
+        .hz-divider {
             display: flex;
             align-items: center;
             gap: 12px;
             margin: 18px 0;
-            color: #94A3B8 !important;
+            color: #64748B !important;
             font-size: 0.86rem;
-        }}
+        }
 
         .hz-divider:before,
-        .hz-divider:after {{
+        .hz-divider:after {
             content: "";
             flex: 1;
             height: 1px;
-            background: rgba(225,232,237,0.18);
-        }}
+            background: #DDE5E0;
+        }
 
-        .hz-note {{
+        .hz-note {
             text-align: center;
-            color: #94A3B8 !important;
+            color: #64748B !important;
             font-size: 0.82rem;
             margin-top: 18px;
-        }}
+        }
 
-        input, textarea {{
-            background: rgba(8, 19, 31, 0.72) !important;
-            color: #F8FAFC !important;
-            border: 1px solid rgba(225, 232, 237, 0.25) !important;
-            border-radius: 14px !important;
-        }}
-
-        input {{
-            min-height: 46px !important;
-        }}
-
-        input::placeholder {{
-            color: #94A3B8 !important;
-        }}
-
-        label {{
-            color: #F8FAFC !important;
-            font-weight: 700 !important;
-        }}
-
-        button {{
-            background: #00ED64 !important;
+        input, textarea {
+            background: #FFFFFF !important;
             color: #101820 !important;
-            border: 1px solid #00ED64 !important;
-            border-radius: 14px !important;
+            border: 1px solid #CBD5D1 !important;
+            border-radius: 12px !important;
+        }
+
+        input {
+            min-height: 44px !important;
+        }
+
+        input::placeholder {
+            color: #64748B !important;
+        }
+
+        label {
+            color: #101820 !important;
+            font-weight: 700 !important;
+        }
+
+        button {
+            border-radius: 12px !important;
             font-weight: 900 !important;
-            min-height: 48px !important;
-        }}
+            min-height: 46px !important;
+        }
 
-        button:hover {{
-            filter: brightness(1.05);
+        .stButton > button,
+        [data-testid="stFormSubmitButton"] button {
+            background: linear-gradient(135deg, #009B5A, #00B86B) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #009B5A !important;
+            box-shadow: 0px 14px 28px rgba(0,155,90,0.24);
+        }
+
+        .stButton > button:hover,
+        [data-testid="stFormSubmitButton"] button:hover {
+            filter: brightness(1.04);
             transform: translateY(-1px);
-            box-shadow: 0px 14px 36px rgba(0,237,100,0.32);
-        }}
+        }
 
-        [data-testid="stForm"] {{
+        [data-testid="stForm"] {
             border: none !important;
             padding: 0 !important;
-        }}
+        }
 
-        [data-testid="stAlert"] {{
+        [data-testid="stAlert"] {
             border-radius: 14px !important;
-        }}
+        }
+
+        .hz-link-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: .82rem;
+            color: #4B5563;
+            margin-top: -4px;
+            margin-bottom: 10px;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -887,18 +905,18 @@ def exibir_logo():
         "assets/logo.png",
     ]:
         if Path(caminho).exists():
-            st.image(caminho, width=250)
+            st.image(caminho, width=185)
             return
 
     st.markdown(
         """
         <div style="text-align:center;">
             <div style="
-                width:118px;height:118px;margin:auto;border-radius:28px;
-                background:linear-gradient(135deg,#0A2647,#00ED64);
+                width:84px;height:84px;margin:auto;border-radius:22px;
+                background:linear-gradient(135deg,#101820,#009B5A);
                 display:flex;align-items:center;justify-content:center;
-                color:white;font-size:64px;font-weight:900;
-                border:1px solid rgba(255,255,255,.25);
+                color:white;font-size:48px;font-weight:900;
+                border:1px solid rgba(0,0,0,.08);
             ">H</div>
         </div>
         """,
@@ -963,6 +981,7 @@ def tela_aceite_obrigatorio():
 
     st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
     st.markdown('<div class="hz-mini-title">Aceite obrigatório do termo</div>', unsafe_allow_html=True)
+
     st.markdown(
         """
         <div class="hz-mini-subtitle">
@@ -1037,6 +1056,7 @@ def tela_troca_senha_obrigatoria():
 
     st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
     st.markdown('<div class="hz-mini-title">Atualização de senha obrigatória</div>', unsafe_allow_html=True)
+
     st.markdown(
         """
         <div class="hz-mini-subtitle">
@@ -1131,6 +1151,14 @@ def exibir_codigo_teste(chave):
             st.info(f"Modo teste: código de verificação **{codigo}**")
 
 
+def abrir_login_card():
+    st.markdown('<div class="hz-login-shell"><div class="hz-login-content">', unsafe_allow_html=True)
+
+
+def fechar_login_card():
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+
 def tela_login():
     css_login()
 
@@ -1143,25 +1171,26 @@ def tela_login():
     if "auth_tela" not in st.session_state:
         st.session_state["auth_tela"] = "login"
 
-    exibir_logo()
-
     tela = st.session_state["auth_tela"]
 
     if tela == "login":
+        abrir_login_card()
+
+        exibir_logo()
+
         st.markdown(
-            '<div class="hz-login-title">Horizonte Health Intelligence</div>',
+            '<div class="hz-login-title">Bem-vindo(a) de volta!</div>',
             unsafe_allow_html=True
         )
 
         st.markdown(
-            '<div class="hz-login-subtitle">Plataforma segura para leitura de bancos DBF do SINAN, auditoria epidemiológica e apoio à decisão.</div>',
+            '<div class="hz-login-subtitle">Acesse sua conta para continuar</div>',
             unsafe_allow_html=True
         )
 
         with st.form("form_login", clear_on_submit=False):
-            usuario = st.text_input("Usuário", placeholder="Usuário")
+            usuario = st.text_input("Usuário ou e-mail", placeholder="Usuário ou e-mail")
             senha = st.text_input("Senha", type="password", placeholder="Senha")
-            st.checkbox("Lembrar de mim", value=True)
 
             entrar = st.form_submit_button("Entrar", use_container_width=True)
 
@@ -1178,26 +1207,31 @@ def tela_login():
                 else:
                     st.error("Usuário ou senha inválidos.")
 
-        st.markdown('<div class="hz-divider">ou</div>', unsafe_allow_html=True)
+        col_check, col_senha = st.columns([1, 1])
 
-        c1, c2 = st.columns(2)
+        with col_check:
+            st.checkbox("Lembrar-me", value=False)
 
-        with c1:
-            if st.button("Criar conta", use_container_width=True):
-                st.session_state["auth_tela"] = "cadastro"
-                st.rerun()
-
-        with c2:
-            if st.button("Esqueci a senha", use_container_width=True):
+        with col_senha:
+            if st.button("Esqueci minha senha", use_container_width=True):
                 st.session_state["auth_tela"] = "redefinir_email"
                 st.rerun()
 
+        st.markdown('<div class="hz-divider">ou</div>', unsafe_allow_html=True)
+
+        if st.button("Criar conta", use_container_width=True):
+            st.session_state["auth_tela"] = "cadastro"
+            st.rerun()
+
         st.markdown(
-            '<div class="hz-note">Ambiente seguro • acesso verificado</div>',
+            '<div class="hz-note">Horizonte Health Intelligence • ambiente seguro</div>',
             unsafe_allow_html=True
         )
 
+        fechar_login_card()
+
     elif tela == "cadastro":
+        exibir_logo()
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar conta</div>', unsafe_allow_html=True)
         st.markdown(
@@ -1257,6 +1291,7 @@ def tela_login():
     elif tela == "verificar_cadastro":
         pendente = st.session_state.get("cadastro_pendente", {})
 
+        exibir_logo()
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Verifique seu e-mail</div>', unsafe_allow_html=True)
         st.markdown(
@@ -1281,7 +1316,7 @@ def tela_login():
                         "instituicao": "",
                         "cargo": "",
                         "funcao": "",
-                        "tema": "Escuro",
+                        "tema": "Claro",
                         "aceitou_lgpd": True,
                         "data_aceite_lgpd": agora_aceite_iso(),
                         "versao_termo_lgpd": VERSAO_TERMO_RESPONSABILIDADE,
@@ -1317,6 +1352,7 @@ def tela_login():
         st.markdown("</div>", unsafe_allow_html=True)
 
     elif tela == "cadastro_sucesso":
+        exibir_logo()
         st.success("Conta verificada! Faça login para continuar.")
 
         if st.button("Ir para o login", use_container_width=True):
@@ -1324,6 +1360,7 @@ def tela_login():
             st.rerun()
 
     elif tela == "redefinir_email":
+        exibir_logo()
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Redefinir senha</div>', unsafe_allow_html=True)
         st.markdown(
@@ -1348,6 +1385,7 @@ def tela_login():
     elif tela == "verificar_redefinicao":
         pendente = st.session_state.get("redefinicao_pendente", {})
 
+        exibir_logo()
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Verifique seu e-mail</div>', unsafe_allow_html=True)
         st.markdown(
@@ -1379,6 +1417,7 @@ def tela_login():
     elif tela == "nova_senha":
         pendente = st.session_state.get("redefinicao_pendente", {})
 
+        exibir_logo()
         st.markdown('<div class="hz-panel">', unsafe_allow_html=True)
         st.markdown('<div class="hz-mini-title">Criar nova senha</div>', unsafe_allow_html=True)
 
